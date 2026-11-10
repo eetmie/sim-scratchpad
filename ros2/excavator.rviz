@@ -1,0 +1,89 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: world
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Cell Size: 0.1
+      Plane Cell Count: 20
+    - Class: rviz_default_plugins/RobotModel
+      Name: Excavator
+      Enabled: true
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+        Durability Policy: Transient Local
+      Alpha: 0.8
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Height map (cells)
+      Enabled: true
+      Topic:
+        Value: /excavator/heightmap_cloud
+      Style: Boxes
+      Size (m): 0.01
+      Color Transformer: AxisColor
+      Axis: Z
+      Autocompute Value Bounds: false
+      Min Value: -0.05
+      Max Value: 0.15
+      Decay Time: 0
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Cabin lidar
+      Enabled: true
+      Topic:
+        Value: /lidar_cabin/points
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: FlatColor
+      Color: 0; 255; 77
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Boom lidar
+      Enabled: true
+      Topic:
+        Value: /lidar_boom/points
+      Style: Points
+      Size (Pixels): 3
+      Color Transformer: FlatColor
+      Color: 255; 153; 0
+    - Class: rviz_default_plugins/Image
+      Name: Cabin camera
+      Enabled: true
+      Topic:
+        Value: /cam_cabin/image_raw
+    - Class: rviz_default_plugins/Image
+      Name: Boom camera
+      Enabled: true
+      Topic:
+        Value: /cam_boom/image_raw
+    - Class: rviz_default_plugins/Image
+      Name: Height map
+      Enabled: true
+      Topic:
+        Value: /excavator/heightmap
+      Normalize Range: false
+      Min Value: -0.15
+      Max Value: 0.15
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 1.6
+      Focal Point:
+        X: 0.4
+        Y: 0
+        Z: 0
+      Pitch: 0.6
+      Yaw: 3.6
+      Target Frame: world
+Window Geometry:
+  Width: 1400
+  Height: 900

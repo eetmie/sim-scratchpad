@@ -1,0 +1,164 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="excavator_bucket">
+  <link name="world" />
+  <joint name="world_fixed" type="fixed">
+    <parent link="world" />
+    <child link="lower_carriage" />
+    <origin xyz="7.4505806e-09 -4.65661287e-10 0.0799999106" rpy="0 0 0" />
+  </joint>
+  <link name="lower_carriage">
+    <inertial>
+      <origin xyz="0.00459389994 -0.000172800006 -0.0382546" rpy="0 0 0" />
+      <mass value="6.5" />
+      <inertia ixx="0.0494419532" ixy="0.000532120753" ixz="0.000543117494" iyy="0.0529755545" iyz="-3.43905757e-05" izz="0.097093089" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh.obj" />
+      </geometry>
+      <origin xyz="-1.3416743e-10 -1.36495368e-11 3.00246356e-11" rpy="2.52539498e-10 -2.23827179e-10 -1.38038848e-09" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_1.obj" />
+      </geometry>
+      <origin xyz="-1.3416743e-10 -1.36495368e-11 3.00246356e-11" rpy="2.52539498e-10 -2.23827179e-10 -1.38038848e-09" />
+    </collision>
+  </link>
+  <link name="upper_carriage">
+    <inertial>
+      <origin xyz="-0.082165651 0.00132323999 0.0460170582" rpy="0 0 0" />
+      <mass value="8.10000038" />
+      <inertia ixx="0.0446462752" ixy="-0.0058658417" ixz="0.000210236365" iyy="0.0700401432" iyz="-0.00203415657" izz="0.0956369562" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_2.obj" />
+      </geometry>
+      <origin xyz="7.43387258e-09 -1.23869916e-09 1.42557127e-08" rpy="1.16728021e-09 1.97707539e-09 1.26425587e-09" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_3.obj" />
+      </geometry>
+      <origin xyz="7.43387258e-09 -1.23869916e-09 1.42557127e-08" rpy="1.16728021e-09 1.97707539e-09 1.26425587e-09" />
+    </collision>
+  </link>
+  <link name="lift_boom">
+    <inertial>
+      <origin xyz="0.199810997 -9.40000027e-05 -0.0444680005" rpy="0 0 0" />
+      <mass value="1.15298998" />
+      <inertia ixx="0.00493442618" ixy="2.05159605e-06" ixz="0.0072826539" iyy="0.0213519858" iyz="3.60221078e-06" izz="0.0167195885" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_4.obj" />
+      </geometry>
+      <origin xyz="6.10918277e-08 -2.1589419e-08 -4.05320736e-08" rpy="2.62739855e-07 1.00496056 2.12472773e-07" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_5.obj" />
+      </geometry>
+      <origin xyz="6.10918277e-08 -2.1589419e-08 -4.05320736e-08" rpy="2.62739855e-07 1.00496056 2.12472773e-07" />
+    </collision>
+  </link>
+  <link name="tilt_boom">
+    <inertial>
+      <origin xyz="0.0650499985 -4.99999987e-05 0.0178399999" rpy="0 0 0" />
+      <mass value="0.776260018" />
+      <inertia ixx="0.000359971575" ixy="1.18316197e-11" ixz="0.000676012881" iyy="0.00604417361" iyz="-4.98380413e-12" izz="0.00586303623" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_6.obj" />
+      </geometry>
+      <origin xyz="9.53558736e-08 -2.66804992e-08 -2.58573682e-08" rpy="-3.14159262 -1.43151972 3.14159255" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_7.obj" />
+      </geometry>
+      <origin xyz="9.53558736e-08 -2.66804992e-08 -2.58573682e-08" rpy="-3.14159262 -1.43151972 3.14159255" />
+    </collision>
+  </link>
+  <link name="tool_body">
+    <inertial>
+      <origin xyz="0.0265997909 0 -0.0101976469" rpy="0 0 0" />
+      <mass value="0.136999995" />
+      <inertia ixx="4.02884153e-05" ixy="0" ixz="4.81998596e-06" iyy="6.00939347e-05" iyz="0" izz="8.15477932e-05" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_8.obj" />
+      </geometry>
+      <origin xyz="7.47656789e-08 1.83933941e-09 1.33092306e-07" rpy="3.94782934e-07 0.753980772 7.0382105e-08" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_9.obj" />
+      </geometry>
+      <origin xyz="7.47656789e-08 1.83933941e-09 1.33092306e-07" rpy="3.94782934e-07 0.753980772 7.0382105e-08" />
+    </collision>
+  </link>
+  <link name="bucket">
+    <inertial>
+      <origin xyz="3.48836365e-05 0.0272149146 -0.04957629" rpy="0 0 0" />
+      <mass value="0.474999994" />
+      <inertia ixx="0.000964227458" ixy="-6.24698481e-08" ixz="-7.05054432e-07" iyy="0.00117944899" iyz="0.000197167512" izz="0.00110239076" />
+    </inertial>
+    <visual name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_10.obj" />
+      </geometry>
+      <origin xyz="1.06665941e-08 0.0378226592 0.0334291546" rpy="-2.67106557e-07 0.335104083 -1.57079625" />
+    </visual>
+    <collision name="Mesh">
+      <geometry>
+        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_11.obj" />
+      </geometry>
+      <origin xyz="1.07987828e-08 0.0378226593 0.0334291545" rpy="-2.67299811e-07 0.335104081 -1.57079625" />
+    </collision>
+  </link>
+  <joint name="revolute_carriage" type="continuous">
+    <parent link="lower_carriage" />
+    <child link="upper_carriage" />
+    <axis xyz="0 0 1" />
+    <limit effort="1000000" velocity="0.261799395" />
+    <dynamics friction="0" />
+    <!-- isaac:source_drive {"armature": 0.0, "drive": {"damping": 0.6981316804885864, "stiffness": 10.471975326538086, "target_position": -23.370637893676758}, "instance": "angular", "source": "physx", "unauthored_effort": {"effort": "1000000", "joint_type": "continuous", "mimic": null}} -->
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <joint name="revolute_lift" type="revolute">
+    <origin xyz="0.0165000334 5.89998717e-09 0.0785000175" rpy="0 -0.455181874 0" />
+    <parent link="upper_carriage" />
+    <child link="lift_boom" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.914000015" upper="0.543000004" effort="1000000" velocity="0.17453292" />
+    <dynamics friction="0" />
+    <!-- isaac:source_drive {"armature": 0.0, "drive": {"damping": 2.094395160675049, "stiffness": 41.887901306152344, "target_position": -42.067237854003906}, "instance": "angular", "source": "physx", "unauthored_effort": {"effort": "1000000", "joint_type": "revolute", "mimic": null}} -->
+  </joint>
+  <joint name="revolute_tilt" type="revolute">
+    <origin xyz="0.420348704 0 -0.205744803" rpy="0 0.455181874 0" />
+    <parent link="lift_boom" />
+    <child link="tilt_boom" />
+    <axis xyz="0 1 0" />
+    <limit lower="0.441999986" upper="2.55099993" effort="1000000" velocity="0.218166158" />
+    <dynamics friction="0" />
+    <!-- isaac:source_drive {"armature": 0.0, "drive": {"damping": 2.094395160675049, "stiffness": 41.887901306152344, "target_position": 88.25529479980469}, "instance": "angular", "source": "physx", "unauthored_effort": {"effort": "1000000", "joint_type": "revolute", "mimic": null}} -->
+  </joint>
+  <joint name="revolute_tool" type="revolute">
+    <origin xyz="0.239905 0 -0.00675141811" rpy="0 0 0" />
+    <parent link="tilt_boom" />
+    <child link="tool_body" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.09500004" upper="0.390000001" effort="1000000" velocity="0.34906584" />
+    <dynamics friction="0" />
+    <!-- isaac:source_drive {"armature": 0.0, "drive": {"damping": 2.094395160675049, "stiffness": 41.887901306152344, "target_position": -63.99569320678711}, "instance": "angular", "source": "physx", "unauthored_effort": {"effort": "1000000", "joint_type": "revolute", "mimic": null}} -->
+  </joint>
+  <joint name="fix_tool" type="fixed">
+    <origin xyz="0.0467125765 -6.7134634e-09 -0.0191310507" rpy="-0.335104079 -2.94564789e-07 1.57079629" />
+    <parent link="tool_body" />
+    <child link="bucket" />
+  </joint>
+</robot>
