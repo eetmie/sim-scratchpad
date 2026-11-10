@@ -26,7 +26,7 @@ ros2 launch scripts/sim-scratchpad/ros2/view_excavator.launch.py
 | --- | --- | --- | --- |
 | `/clock` | `rosgraph_msgs/Clock` | every frame | resets to 0 on Stop |
 | `/joint_states` | `sensor_msgs/JointState` | every frame | rad; `revolute_carriage, revolute_lift, revolute_tilt, revolute_tool` |
-| `/cam_cabin/image_raw`, `/cam_boom/image_raw` | `sensor_msgs/Image` rgb8 | every frame | 320 x 240 (`CAMERA_RES`), plus `camera_info` |
+| `/excavator/cameras/cabin/image_raw`, `/excavator/cameras/arm/image_raw` | `sensor_msgs/Image` rgb8 | every frame | 320 x 240 (`CAMERA_RES`), plus `camera_info`; frames `cabin_camera`, `arm_camera` (robot names) |
 | `/lidar_cabin/points`, `/lidar_boom/points` | `sensor_msgs/PointCloud2` xyz | ~5 Hz | frame `world`, excavator hits removed |
 | `/excavator/heightmap` | `sensor_msgs/Image` 32FC1 | ~5 Hz | 64 x 64, m above ground, NaN = unseen; row 0 = +X edge, col 0 = +Y edge; X 0.16..0.80, Y -0.32..0.32 m |
 | `/excavator/heightmap_cloud` | `sensor_msgs/PointCloud2` xyz | ~5 Hz | known cell centers, for the 3D view |

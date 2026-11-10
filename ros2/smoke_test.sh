@@ -15,7 +15,7 @@ sleep 20  # graph build, Play, first lidar scans
 source /opt/ros/lyrical/setup.bash
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 fail=0
-for topic in /clock /joint_states /cam_cabin/image_raw /cam_boom/image_raw /lidar_cabin/points /lidar_boom/points \
+for topic in /clock /joint_states /excavator/cameras/cabin/image_raw /excavator/cameras/arm/image_raw /lidar_cabin/points /lidar_boom/points \
     /excavator/heightmap /excavator/heightmap_cloud; do
     if timeout 10 ros2 topic echo --once "$topic" >/dev/null 2>&1; then echo "PASS $topic"; else echo "FAIL $topic"; fail=1; fi
 done

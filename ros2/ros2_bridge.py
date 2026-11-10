@@ -6,7 +6,7 @@ then run this file. It also starts excavator_teleop.py (which starts lidar_demo_
 Published (all stamped with sim time; frames are in the URDF from export_urdf.py):
     /clock                                   rosgraph_msgs/Clock
     /joint_states                            sensor_msgs/JointState (rad), feeds robot_state_publisher
-    /cam_cabin/image_raw, /cam_boom/...      sensor_msgs/Image rgb8 (+ camera_info)
+    /excavator/cameras/{cabin,arm}/image_raw sensor_msgs/Image rgb8 (+ camera_info); same names as the robot bridge
     /lidar_cabin/points, /lidar_boom/points  sensor_msgs/PointCloud2, frame "world", excavator hits removed
     /excavator/heightmap                     sensor_msgs/Image 32FC1, height above ground in m, NaN = unseen
                                              row 0 = +X edge, column 0 = +Y edge (same as the omni.ui view)
@@ -28,10 +28,10 @@ from pxr import Sdf, Usd
 TELEOP_SCRIPT = "/home/joel/IsaacLab/scripts/sim-scratchpad/excavator_teleop.py"
 GRAPH_PATH = "/ROS2Bridge"
 ROBOT_PATH = "/World/excavator_bucket"
-# (camera prim, ROS name). Small images keep the extra render cost low.
+# (camera prim, contract camera name). Small images keep the extra render cost low.
 CAMERAS = [
-    ("/World/excavator_bucket/upper_carriage/cam_cabin", "cam_cabin"),
-    ("/World/excavator_bucket/tilt_boom/cam_boom", "cam_boom"),
+    ("/World/excavator_bucket/upper_carriage/cam_cabin", "cabin"),
+    ("/World/excavator_bucket/tilt_boom/cam_boom", "arm"),
 ]
 CAMERA_RES = (320, 240)
 # Lidar debug points in the viewport also land in the camera images; RViz shows them instead.
@@ -106,11 +106,11 @@ def build_graph(stage):
             (f"{render}.inputs:width", CAMERA_RES[0]),
             (f"{render}.inputs:height", CAMERA_RES[1]),
             (f"{rgb}.inputs:type", "rgb"),
-            (f"{rgb}.inputs:topicName", f"{name}/image_raw"),
-            (f"{rgb}.inputs:frameId", name),
+            (f"{rgb}.inputs:topicName", f"excavator/cameras/{name}/image_raw"),
+            (f"{rgb}.inputs:frameId", f"{name}_camera"),
             (f"{rgb}.inputs:resetSimulationTimeOnStop", True),
-            (f"{info}.inputs:topicName", f"{name}/camera_info"),
-            (f"{info}.inputs:frameId", name),
+            (f"{info}.inputs:topicName", f"excavator/cameras/{name}/camera_info"),
+            (f"{info}.inputs:frameId", f"{name}_camera"),
             (f"{info}.inputs:resetSimulationTimeOnStop", True),
         ]
         connects.append(("RunOnce.outputs:step", f"{render}.inputs:execIn"))

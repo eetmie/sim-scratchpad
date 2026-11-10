@@ -56,12 +56,12 @@ Visualization Manager:
       Name: Cabin camera
       Enabled: true
       Topic:
-        Value: /cam_cabin/image_raw
+        Value: /excavator/cameras/cabin/image_raw
     - Class: rviz_default_plugins/Image
       Name: Boom camera
       Enabled: true
       Topic:
-        Value: /cam_boom/image_raw
+        Value: /excavator/cameras/arm/image_raw
     - Class: rviz_default_plugins/Image
       Name: Height map
       Enabled: true
