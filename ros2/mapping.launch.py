@@ -23,7 +23,7 @@ from launch_ros.actions import Node
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import sensors  # noqa: E402
-from robot_boxes import box_params  # noqa: E402
+from robot_boxes import box_params, read_urdf  # noqa: E402
 
 CAMERAS = ["cabin"]
 
@@ -61,8 +61,7 @@ def depth_to_cloud(context, urdf, sim_time):
 
 
 def generate_launch_description():
-    with open(os.path.join(HERE, "urdf", "excavator.urdf")) as f:
-        urdf = f.read()
+    urdf = read_urdf(HERE)
     sim_time = {"use_sim_time": LaunchConfiguration("use_sim_time")}
     return LaunchDescription(
         [

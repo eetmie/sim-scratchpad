@@ -3,9 +3,20 @@
 mapping.launch.py passes link_boxes() to the C++ depth_to_cloud node as parameters (box_links, box_data).
 """
 
+import os
+import re
 import xml.etree.ElementTree as ET
 
 import numpy as np
+
+
+def read_urdf(ros2_dir):
+    """urdf/excavator.urdf with its mesh paths pointed at this checkout.
+
+    The exporter writes absolute mesh paths of the machine it ran on; the robot and other machines have their own.
+    """
+    with open(os.path.join(ros2_dir, "urdf", "excavator.urdf")) as f:
+        return re.sub(r"file://[^\"]*/urdf/meshes/", f"file://{ros2_dir}/urdf/meshes/", f.read())
 
 
 def rpy_matrix(r, p, y):

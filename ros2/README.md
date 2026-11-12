@@ -27,6 +27,10 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ros2 launch scripts/sim-scratchpad/ros2/view_excavator.launch.py   # teleop/mapping/rviz:=false to leave out
 ```
 
+Real robot instead of the sim: same terminal 2 with `sim:=false calibration:=~/depth-live-bench/sand-calibration.json`
+(wall clock; the robot's bridge publishes its own camera frames and `/excavator/joint_angles`; `calibration:=` loads
+the stereo depth correction).
+
 - Gamepad (ISO layout, any SDL pad): left stick X swing, left stick Y arm, right stick X bucket, right stick Y boom.
   Swing has no end stop, like the real machine; the other joints stop inside the robot's joint bounds.
 - Clear the map: `ros2 service call /fastdem/reset_map std_srvs/srv/Trigger` (Stop in Isaac clears it too).
