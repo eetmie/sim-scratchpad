@@ -22,21 +22,38 @@ Visualization Manager:
         Durability Policy: Transient Local
       Alpha: 0.8
     - Class: rviz_default_plugins/PointCloud2
-      Name: Height map (cells)
+      Name: FastDEM map
       Enabled: true
       Topic:
-        Value: /excavator/heightmap_cloud
+        Value: /fastdem/mapping/cloud
       Style: Boxes
       Size (m): 0.01
       Color Transformer: AxisColor
       Axis: Z
-      Autocompute Value Bounds: false
-      Min Value: -0.05
-      Max Value: 0.15
+      Autocompute Value Bounds: true
       Decay Time: 0
     - Class: rviz_default_plugins/PointCloud2
-      Name: Cabin lidar
+      Name: Cabin depth (filtered)
+      Enabled: false
+      Topic:
+        Value: /excavator/cameras/cabin/points
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: FlatColor
+      Color: 80; 160; 255
+    - Class: rviz_default_plugins/Image
+      Name: Cabin camera (RGB)
       Enabled: true
+      Topic:
+        Value: /excavator/cameras/cabin/image_raw
+    - Class: rviz_default_plugins/Image
+      Name: Arm camera (RGB)
+      Enabled: true
+      Topic:
+        Value: /excavator/cameras/arm/image_raw
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Cabin lidar
+      Enabled: false
       Topic:
         Value: /lidar_cabin/points
       Style: Points
@@ -45,7 +62,7 @@ Visualization Manager:
       Color: 0; 255; 77
     - Class: rviz_default_plugins/PointCloud2
       Name: Boom lidar
-      Enabled: true
+      Enabled: false
       Topic:
         Value: /lidar_boom/points
       Style: Points
@@ -53,23 +70,10 @@ Visualization Manager:
       Color Transformer: FlatColor
       Color: 255; 153; 0
     - Class: rviz_default_plugins/Image
-      Name: Cabin camera
+      Name: Height map (VLA, cabin frame)
       Enabled: true
       Topic:
-        Value: /cam_cabin/image_raw
-    - Class: rviz_default_plugins/Image
-      Name: Boom camera
-      Enabled: true
-      Topic:
-        Value: /cam_boom/image_raw
-    - Class: rviz_default_plugins/Image
-      Name: Height map
-      Enabled: true
-      Topic:
-        Value: /excavator/heightmap
-      Normalize Range: false
-      Min Value: -0.15
-      Max Value: 0.15
+        Value: /excavator/heightmap/image
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera

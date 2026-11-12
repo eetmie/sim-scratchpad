@@ -26,5 +26,5 @@ print("[headless_run] playing", flush=True)
 end = time.time() + float(sys.argv[1])
 while time.time() < end:
     app.update()
-print("[headless_run] done; known height map cells:", int(namespace["cabin_lidar_state"]["heightmap"]["valid"].sum()))
+print("[headless_run] done", flush=True)
 app.close()
