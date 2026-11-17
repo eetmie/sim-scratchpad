@@ -74,6 +74,16 @@ Visualization Manager:
       Enabled: true
       Topic:
         Value: /excavator/heightmap/image
+    - Class: rviz_default_plugins/Image
+      Name: Policy input - height map (as fed to the model)
+      Enabled: true
+      Topic:
+        Value: /policy/inputs/heightmap
+    - Class: rviz_default_plugins/Image
+      Name: Policy input - cabin (as fed to the model)
+      Enabled: true
+      Topic:
+        Value: /policy/inputs/cabin
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera
