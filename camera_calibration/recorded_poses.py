@@ -8,7 +8,7 @@ import numpy as np
 import pyarrow.parquet as pq
 from scipy.spatial.transform import Rotation, Slerp
 
-from pxr import Usd, UsdGeom, UsdPhysics
+from pxr import Gf, Usd, UsdGeom, UsdPhysics
 
 from . import BASE_STAGE
 from .usd_cameras import ROBOT
@@ -34,8 +34,11 @@ def link_poses(samples, stamps):
     return rotations, positions
 
 
-def replay_plan(dataset, episode, start, stop, stride):
-    columns = ["index", "frame_index", *STREAMS.values()]
+def replay_plan(dataset, episode, start, stop, stride, timestamp_source="ir"):
+    if timestamp_source not in ("ir", "depth"):
+        raise ValueError("timestamp_source must be ir or depth")
+    columns = ["index", "frame_index"]
+    columns += list(STREAMS.values()) if timestamp_source == "ir" else ["clock.depth_host_ns"]
     # shortcut: this export stores all observation rows in one shard, extend the reader for multi-shard takes.
     rows = pq.read_table(
         dataset / "data/chunk-000/file-000.parquet",
@@ -64,21 +67,56 @@ def replay_plan(dataset, episode, start, stop, stride):
     lift_mesh_rotation = Rotation.from_quat([q.GetReal(), *q.GetImaginary()], scalar_first=True).inv().as_matrix()
 
     views = {}
-    for name, column in STREAMS.items():
-        rotations, positions = link_poses(samples, rows[column][::stride])
+    sample_times = np.array(sorted(samples), dtype=np.int64)
+    angles = np.unwrap(np.array([samples[t]["angles_rad"] for t in sample_times]), axis=0)
+    for sensor_index, (name, column) in enumerate(STREAMS.items()):
+        stamps = (
+            np.array(rows[column][::stride], dtype=np.int64)
+            if timestamp_source == "ir"
+            else np.array(rows["clock.depth_host_ns"][::stride], dtype=np.int64)[:, sensor_index]
+        )
+        if np.any(stamps <= 0):
+            raise ValueError(f"{name}: missing {timestamp_source} exposure timestamp")
+        rotations, positions = link_poses(samples, stamps)
         # The real boom FK frame points between its pins. The CAD link frame includes the joint's child rotation.
         rotations[:, 1] = rotations[:, 1] @ lift_mesh_rotation
         frames = []
-        for index, r, p in zip(rows["index"][::stride], rotations, positions, strict=True):
+        for index, frame_index, stamp, r, p in zip(
+            rows["index"][::stride], rows["frame_index"][::stride], stamps, rotations, positions, strict=True
+        ):
             bodies = np.repeat(np.eye(4)[None, :, :], len(LINKS), axis=0)
             bodies[:, :3, :3] = r.transpose(0, 2, 1)
             bodies[:, 3, :3] = p + NATIVE_TO_STAGE
             local = bodies @ robot_inv
             transforms = {f"{ROBOT}/{link}": matrix.tolist() for link, matrix in zip(LINKS, local, strict=True)}
             transforms[f"{ROBOT}/bucket"] = (bucket_in_tool @ local[-1]).tolist()
-            frames.append({"index": index, "transforms": transforms})
+            frames.append(
+                {
+                    "index": index,
+                    "frame_index": frame_index,
+                    "timestamp_ns": int(stamp),
+                    "fk_clamped": bool(stamp < sample_times[0] or stamp > sample_times[-1]),
+                    "angles_rad": [
+                        float(np.interp(stamp - sample_times[0], sample_times - sample_times[0], q)) for q in angles.T
+                    ],
+                    "transforms": transforms,
+                }
+            )
         views[name] = frames
-    return {"views": views}
+    return {"views": views, "episode": episode, "timestamp_source": timestamp_source}
+
+
+def apply_transforms(stage, transforms, ops):
+    """Apply a calibration replay pose on the caller's edit layer, reusing USD ops."""
+    for path, matrix in transforms.items():
+        if path not in ops:
+            xform = UsdGeom.Xformable(stage.GetPrimAtPath(path))
+            if not xform:
+                raise ValueError(f"Replay target does not exist: {path}")
+            op = xform.AddTransformOp(opSuffix="recordedReplay")
+            xform.SetXformOpOrder([op], xform.GetResetXformStack())
+            ops[path] = op
+        ops[path].Set(Gf.Matrix4d(*np.asarray(matrix).ravel()))
 
 
 def main():
@@ -88,11 +126,12 @@ def main():
     parser.add_argument("--start", type=int, default=0)
     parser.add_argument("--stop", type=int, required=True, help="Exclusive frame index")
     parser.add_argument("--stride", type=int, default=1)
+    parser.add_argument("--timestamps", choices=("ir", "depth"), default="ir")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     if args.episode < 0 or not 0 <= args.start < args.stop or args.stride < 1:
         parser.error("Expected a nonnegative episode and frame range and a positive stride")
-    plan = replay_plan(args.dataset, args.episode, args.start, args.stop, args.stride)
+    plan = replay_plan(args.dataset, args.episode, args.start, args.stop, args.stride, args.timestamps)
     with args.out.open("x") as output:
         json.dump(plan, output, separators=(",", ":"))
 

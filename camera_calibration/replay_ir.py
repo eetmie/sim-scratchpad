@@ -15,8 +15,9 @@ def render(stage_path, plan, out, subframes):
 
     import omni.replicator.core as rep
     import omni.usd
-    from pxr import Gf, Usd, UsdGeom
+    from pxr import Usd, UsdGeom
 
+    from .recorded_poses import apply_transforms
     from .usd_cameras import cameras, describe
 
     context = omni.usd.get_context()
@@ -40,13 +41,7 @@ def render(stage_path, plan, out, subframes):
             folder.mkdir(exist_ok=True)
             try:
                 for number, frame in enumerate(frames):
-                    for path, matrix in frame.get("transforms", {}).items():
-                        if path not in ops:
-                            xform = UsdGeom.Xformable(stage.GetPrimAtPath(path))
-                            op = xform.AddTransformOp(opSuffix="irReplay")
-                            xform.SetXformOpOrder([op], xform.GetResetXformStack())
-                            ops[path] = op
-                        ops[path].Set(Gf.Matrix4d(*np.asarray(matrix).ravel()))
+                    apply_transforms(stage, frame.get("transforms", {}), ops)
                     rep.orchestrator.step(rt_subframes=subframes, delta_time=0.0)
                     rgba = np.asarray(color.get_data())
                     if rgba.shape != (height, width, 4) or rgba.dtype != np.uint8:

@@ -1,5 +1,9 @@
 # Depth self-filter + FastDEM (ROS side)
 
+For the **latest calibrated 3DGS viewer**, use [LATEST.md](LATEST.md): local two-camera
+mapping with processed ROS outputs and optional raw depth. The pipeline below remains
+for the robot or another depth-publishing source; do not run both estimators for the viewer.
+
 Restored from the robot's copy after the 8446cb3 cleanup. End use is over ROS; the same launch runs on the robot.
 
 ```bash

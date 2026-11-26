@@ -25,6 +25,10 @@ of 0.93 and 1.46 pixels in the cabin. The arm's median is 3.22 pixels on the sec
 The replay interpolates measured FK at each IR timestamp. It uses the static room scan and CAD robot, so
 the near-camera hardware, sand deformation, and IR reflectance can differ from the recording.
 
+For timestamp-matched D435i depth comparisons and a looping robot replay, see
+[Replay logged motion and compare recorded depth](../DEPTH_MAPPING.md#replay-logged-motion-and-compare-recorded-depth).
+`recorded_poses --timestamps depth` uses the depth exposure clock with the same calibrated link-pose replay.
+
 ## Generic calibration workflow
 
 Run from `scripts/sim-scratchpad`. These commands use Isaac Lab's existing `.venv`. Stage inspection, fitting and
