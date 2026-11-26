@@ -1,0 +1,19 @@
+{
+  "format_version": "1.0",
+  "package_id": "simready.hf.nvidia.simready-assets.kitchenware_bowl_h01.2026.10.09_060243923493",
+  "license": "CC-BY-4.0",
+  "metadata": [
+    {
+      "name": "com.nvidia.simready.packaging.bom.json",
+      "hash": {
+        "sha256": "4f7dc24a5efd942ccaeb1d81ffb4a1bbcb168216eb062caf2d0dbb2fef307097"
+      }
+    }
+  ],
+  "content_hash": {
+    "sha256": "0ab300999f28bb1073686a71d80d23d35c8657e9cb5d3d66170fa0da39a6aaf2"
+  },
+  "package_hash": {
+    "sha256": "dff5846bbda4df85d1891997d8141ddfc26ca569a2417b2b86ee09773873dae9"
+  }
+}

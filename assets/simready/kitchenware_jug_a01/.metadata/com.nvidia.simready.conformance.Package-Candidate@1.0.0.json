@@ -1,0 +1,38 @@
+{
+  "format_version": "1.0",
+  "profile": "Package-Candidate",
+  "profile_version": "1.0.0",
+  "timestamp": "2026-10-09T06:13:44",
+  "assets": [
+    {
+      "asset": "simready_usd/sm_kitchenware_jug_a01_01.usd",
+      "features": [
+        {
+          "FET_031_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": []
+          }
+        },
+        {
+          "FET_033_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": [
+              {
+                "FET_031_STANDARD": {
+                  "version": "0.1.0"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "content_hash": {
+    "sha256": "2df5957f84e8f4e9349756b6dd4743bad6157b029ff8f9efdff44ac26f45b91c"
+  }
+}

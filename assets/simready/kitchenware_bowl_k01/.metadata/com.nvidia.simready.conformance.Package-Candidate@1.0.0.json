@@ -1,0 +1,38 @@
+{
+  "format_version": "1.0",
+  "profile": "Package-Candidate",
+  "profile_version": "1.0.0",
+  "timestamp": "2026-10-09T06:04:38",
+  "assets": [
+    {
+      "asset": "simready_usd/sm_kitchenware_bowl_k01_01.usd",
+      "features": [
+        {
+          "FET_031_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": []
+          }
+        },
+        {
+          "FET_033_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": [
+              {
+                "FET_031_STANDARD": {
+                  "version": "0.1.0"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "content_hash": {
+    "sha256": "09e647e4f0ad5e6f06cb2086f57e8c7f34e85f409e35f3d19441d3d1f00efde8"
+  }
+}

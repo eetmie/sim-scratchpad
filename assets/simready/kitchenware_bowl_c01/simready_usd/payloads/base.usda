@@ -1,0 +1,273 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary SimReady_Metadata = {
+            dictionary Variants = {
+                dictionary Physics = {
+                    dictionary MuJoCo = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "MuJoCo"
+                    }
+                    dictionary Newton = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "Newton"
+                    }
+                    dictionary PhysX = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "PhysX"
+                    }
+                }
+            }
+            string asset_location = "simready_content\\common_assets\\props_kitchenware\\kitchenware_bowl_c01\\simready_physx_usd\\sm_kitchenware_bowl_c01_01.usd"
+            string asset_type = "prop"
+            string uuid = "94673eb7-d460-4379-993d-2a800de7eaa2"
+            dictionary validation = {
+                string profile = "Robotics-Prop"
+                string profile_version = "3.1.0"
+                dictionary validated_features = {
+                    dictionary "2025-12-15" = {
+                        dictionary FET000_CORE = {
+                            string dependencies = "[]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET001_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_NEUTRAL = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_PHYSX': {'version': '0.1.0'}}, {'FET004_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET005_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET006_BASE_MDL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                    }
+                }
+            }
+            dictionary wikidata = {
+                string curated_path = "bowl/ceramic_bowl"
+                string full_path = "entity/object/container/container/bowl/ceramic bowl"
+                string qcode = "Q125230875"
+            }
+        }
+        string asset_dir = "simready_content/common_assets/props_kitchenware/kitchenware_bowl_c01"
+        string asset_name = "kitchenware_bowl_c01"
+        string asset_type = "prop"
+        string profile = "Prop-Robotics-Neutral"
+        string source_file = "../simready_usd/sm_kitchenware_bowl_c01_01.usd"
+        string usd_date_generated = "2025-12-10 18:36:53"
+        bool used_dsrs_exporter = 1
+    }
+    defaultPrim = "RootNode"
+    metersPerUnit = 1
+    subLayers = [
+        @./Physics/physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+def Xform "RootNode" (
+    prepend apiSchemas = ["SemanticsLabelsAPI:wikidata_class", "SemanticsAPI:wikidata_class", "SemanticsLabelsAPI:wikidata_qcode", "SemanticsAPI:wikidata_qcode"]
+    assetInfo = {
+        asset identifier = @../sm_kitchenware_bowl_c01_01.usd@
+        string name = "sm_kitchenware_bowl_c01_01"
+    }
+    customData = {
+        dictionary Blender = {
+            bool generated = 1
+        }
+        dictionary omni = {
+            dictionary cip = {
+                string timestamp = "2025-12-15 12:02:39"
+                string type = "prop"
+                dictionary validator = {
+                    string[] rules = []
+                    string version = "1.1.6"
+                }
+            }
+        }
+    }
+)
+{
+    custom string omni:simready:documentation = "ceramic bowl"
+    string semantic:wikidata_class:params:semanticData = "ceramic bowl"
+    string semantic:wikidata_class:params:semanticType = "wikidata_class"
+    string semantic:wikidata_qcode:params:semanticData = "Q125230875"
+    string semantic:wikidata_qcode:params:semanticType = "wikidata_qcode"
+    token[] semantics:labels:wikidata_class = ["ceramic bowl"]
+    token[] semantics:labels:wikidata_qcode = ["Q125230875"]
+
+    def Scope "Materials"
+    {
+    }
+
+    def Scope "Geometry"
+    {
+        def Xform "sm_kitchenware_bowl_c01_obj_00"
+        {
+            custom double4 pxr:physics:principalAxes = (1, 0, 0, 0)
+            custom double3 pxr:usd:physics_centerofmass = (4.403492681603893e-8, -2.319632042002695e-9, 0.03162800148129463)
+            custom double3 pxr:usd:physics_inertia = (0.0025208324247689416, 0.0025208339354327812, 0.004195117601776822)
+            custom double pxr:usd:physics_mass = 1.3208912216392492
+            custom int selection_order = 0
+
+            def Xform "sm_kitchenware_bowl_c01_mesh_00" (
+                active = true
+                prepend apiSchemas = ["MaterialBindingAPI"]
+                instanceable = true
+                prepend references = @./instances.usda@</Instances/sm_kitchenware_bowl_c01_mesh_00>
+            )
+            {
+                custom rel material:binding:physics = </RootNode/PhysicsMaterials/physics_mat_m_opaque__ceramic__bowl_c01>
+            }
+
+            def Xform "Grasp_Point_1_1"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.10897935926914215, 0, 0.02654358558356762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "Grasp_Point_1_2"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.11086629331111908, 0, 0.02654358558356762)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "Grasp_Point_2_1"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, -0, 89.98558)
+                float3 xformOp:scale = (0.99999994, 0.99999994, 1)
+                double3 xformOp:translate = (-0.0001258552074432373, -0.10996966063976288, 0.028104981407523155)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "Grasp_Point_2_2"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, -0, 89.98558)
+                float3 xformOp:scale = (0.99999994, 0.99999994, 1)
+                double3 xformOp:translate = (0.0001258552074432373, 0.10705120116472244, 0.028104981407523155)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "grasp_identifier_001"
+            {
+                custom int intersection_face_index = 268
+                custom double3 intersection_location = (-0.00006740554817952216, -0.05957525968551636, 0.028104981407523155)
+                custom double3 intersection_normal = (-0.0290321484208107, -0.7374908924102783, -0.6747328042984009)
+                custom string intersection_object = "sm_kitchenware_bowl_c01_obj_00"
+                custom bool intersections_dirty = 1
+                token visibility = "invisible"
+
+                def BasisCurves "grasp_identifier_curve_001"
+                {
+                    int[] curveVertexCounts = [2]
+                    float3[] extent = [(-0.005125855, -0.11496966, 0.02310498), (0.005125855, 0.112051204, 0.033104982)]
+                    point3f[] points = [(-0.00012585521, -0.10996966, 0.028104981), (0.00012585521, 0.1070512, 0.028104981)]
+                    float[] primvars:tilt = [0, 0] (
+                        interpolation = "vertex"
+                    )
+                    uniform token purpose = "guide"
+                    uniform token type = "linear"
+                    float[] widths = [0.01, 0.01] (
+                        interpolation = "vertex"
+                    )
+                    uniform token wrap = "nonperiodic"
+                }
+            }
+
+            def Xform "grasp_identifier"
+            {
+                custom int intersection_face_index = 202
+                custom double3 intersection_location = (-0.058079659938812256, 0, 0.02654358558356762)
+                custom double3 intersection_normal = (-0.684097170829773, 0.026930857449769974, -0.7288936376571655)
+                custom string intersection_object = "sm_kitchenware_bowl_c01_obj_00"
+                custom bool intersections_dirty = 1
+                token visibility = "invisible"
+
+                def BasisCurves "grasp_identifier_curve"
+                {
+                    int[] curveVertexCounts = [2]
+                    float3[] extent = [(-0.11397936, -0.005, 0.021543585), (0.115866296, 0.005, 0.031543586)]
+                    point3f[] points = [(-0.10897936, 0, 0.026543586), (0.11086629, 0, 0.026543586)]
+                    float[] primvars:tilt = [0, 0] (
+                        interpolation = "vertex"
+                    )
+                    uniform token purpose = "guide"
+                    uniform token type = "linear"
+                    float[] widths = [0.01, 0.01] (
+                        interpolation = "vertex"
+                    )
+                    uniform token wrap = "nonperiodic"
+                }
+            }
+        }
+    }
+
+    def Scope "ReferencePrims"
+    {
+        def Xform "Empty_joint_00" (
+            prepend apiSchemas = ["CollectionAPI:Empty_joint_00"]
+        )
+        {
+            custom bool _renamed = 1
+            custom string _renamed_as = "Empty_joint_00"
+            rel collection:Empty_joint_00:includes = </RootNode/Geometry/sm_kitchenware_bowl_c01_obj_00>
+        }
+    }
+
+    def Scope "Grasp"
+    {
+    }
+
+    def Scope "PhysicsMaterials"
+    {
+        def Material "physics_mat_m_opaque__ceramic__bowl_c01"
+        {
+        }
+    }
+
+    def Scope "Joints"
+    {
+    }
+
+    def Scope "VisualMaterials"
+    {
+    }
+}
+

@@ -7,6 +7,7 @@ set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 HARNESS="${ROS_EXCAVATOR:-$HOME/GitHub/ros-excavator}"
 OUT="$1"; shift
+mkdir -p -- "$(dirname -- "$OUT")"
 SETUP="$(ls /opt/ros/*/setup.bash | head -1)"
 ( source "$SETUP"; export RMW_IMPLEMENTATION=rmw_fastrtps_cpp FASTDDS_BUILTIN_TRANSPORTS=LARGE_DATA  # as run_ros.sh
   exec "$HARNESS/record.py" "$HARNESS/profiles/kaivuri.json" "$OUT" --sim > "$OUT.log" 2>&1 ) &

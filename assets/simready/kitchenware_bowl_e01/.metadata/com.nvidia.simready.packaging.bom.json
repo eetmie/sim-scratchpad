@@ -1,0 +1,292 @@
+{
+  "format_version": "1.0",
+  "items": [
+    {
+      "relative_path": "simready_usd/sm_kitchenware_bowl_e01_01.usd",
+      "size": 21467,
+      "hash": {
+        "sha256": "dec64ce778a8ee5df9d6815678f20a01ce10013ef4dca9e6656e9ed7e20a8b2a"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/sm_kitchenware_bowl_e01_01.usd.png",
+      "size": 136712,
+      "hash": {
+        "sha256": "78b0fc4e1e42133fd573e9de6f1f854f5aebd482da855094129b56f2a8051b59"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/sm_kitchenware_bowl_e01_01_thumbnail.png",
+      "size": 495801,
+      "hash": {
+        "sha256": "9df3f078945b2f7c4bb84eea6db6dc627d904fa8ffb8f56302656ab1dcae36f3"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_kitchenware_bowl_e01_01.usd.png",
+      "size": 597785,
+      "hash": {
+        "sha256": "620771898a6affd7c50e55b98ac92a3a6162ee654d7bfd421d19d9c50be763b5"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_kitchenware_bowl_e01_01.usd_light.png",
+      "size": 430926,
+      "hash": {
+        "sha256": "44c0cbc8646010f9f3dbcc93a7cbf3d8cbcacd56aa52f4939768202efc61aa86"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_kitchenware_bowl_e01_01.usd_transparent.png",
+      "size": 370809,
+      "hash": {
+        "sha256": "40751795c3fe740d4ac8c9e19ab3559d0b22acdf3759fbb402da04f18e9cf634"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/t_kitchenware_bowl_cream_e01_nor.png",
+      "size": 121187,
+      "hash": {
+        "sha256": "1f6588473cdec6ff962e27f1ca86965d2a58c43a8c9038257a0a5ffee4829719"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/t_kitchenware_bowl_cream_e01_alb.png",
+      "size": 238974,
+      "hash": {
+        "sha256": "ebcb38884430affb632bec68da02d389ac096dcc8bd962721a1b7972ef404bcf"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/t_kitchenware_bowl_cream_e01_orm.png",
+      "size": 128009,
+      "hash": {
+        "sha256": "edfddf42b99f5ebb78adfc3cfaf1218d41d152df88fa56b14cc3f63ea25cf82f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/256x256/t_kitchenware_bowl_cream_e01_alb.png.png",
+      "size": 72116,
+      "hash": {
+        "sha256": "af37aa6913c1006246f1825c7a08c81655e09c6c6947a80c1e5078a4fc07a588"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/256x256/t_kitchenware_bowl_cream_e01_nor.png.png",
+      "size": 42235,
+      "hash": {
+        "sha256": "9875593abf5d3b05e05c6803901df63fd1abc93a2243e7a12612f6f3360fbd02"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/256x256/t_kitchenware_bowl_cream_e01_orm.png.png",
+      "size": 49848,
+      "hash": {
+        "sha256": "d52508c2f3d91cc2a2927487b7afb56eb656f46fc9cac5327f4a22180dabc888"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/512x512/t_kitchenware_bowl_cream_e01_alb.png.png",
+      "size": 260054,
+      "hash": {
+        "sha256": "dfce8c1e9edfe1868bf61d1cce276dd7d9254000c21bded1af3a515cf07ee8a9"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/512x512/t_kitchenware_bowl_cream_e01_nor.png.png",
+      "size": 157549,
+      "hash": {
+        "sha256": "34c3f314aac9fb97c8f3c48d5fc5c1b20a30befc2ced6c8b3dd1840f72e80129"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/.thumbs/512x512/t_kitchenware_bowl_cream_e01_orm.png.png",
+      "size": 164986,
+      "hash": {
+        "sha256": "13bd49c7a2b5e61489860cee7fd95b61a6882bf00d2e27cdd312f9ceda7b63c2"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/base.usda",
+      "size": 12447,
+      "hash": {
+        "sha256": "ed529bc13359be4d6b783601cea4165313e7b827897312130cf31b2c6b04a76f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/geometries.usd",
+      "size": 275557,
+      "hash": {
+        "sha256": "b826aeaad6fab55e0f6553f88069aef24a6f254401d50251fd9762244ab81763"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances.usda",
+      "size": 5219,
+      "hash": {
+        "sha256": "6641691d00df3fcb035b657848199a015d9720e08a8f2d3064c108879dde2bcd"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_mujoco.usda",
+      "size": 5491,
+      "hash": {
+        "sha256": "cfa88dfe58816b7194f9dda45f33248d221255f91f98464601437bcef4651522"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_newton.usda",
+      "size": 5342,
+      "hash": {
+        "sha256": "dd35ab164452092d38a3837e2f6d6137f3aea757f4cde26a5d6a8643e1e69ec1"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_physx.usda",
+      "size": 5359,
+      "hash": {
+        "sha256": "ff9ca6a846f1606f7f63d22374e1eb33ad0b4423e68e4d1e222fde025b38d199"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/materials.usda",
+      "size": 9532,
+      "hash": {
+        "sha256": "0b99f38a78c99aafe247f55b4963bf02fcf1da9057ac9b2aff955063351c39de"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/MuJoCo/disabled.usda",
+      "size": 4136,
+      "hash": {
+        "sha256": "40253a0a1c8c2b156d918e5b88f27df3cc97a2de86ef39e3538e6b433367463f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/MuJoCo/enabled.usda",
+      "size": 5440,
+      "hash": {
+        "sha256": "94564ca1c2fbebdfa9daa0773696f538127bd6d9316dd4605895204a68c8f4c3"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Newton/disabled.usda",
+      "size": 4136,
+      "hash": {
+        "sha256": "40253a0a1c8c2b156d918e5b88f27df3cc97a2de86ef39e3538e6b433367463f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Newton/enabled.usda",
+      "size": 4826,
+      "hash": {
+        "sha256": "8360d61bbc1ade22d83a841e919b0290e7de2087354ec87be1c31eee406cc2e8"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/PhysX/disabled.usda",
+      "size": 4136,
+      "hash": {
+        "sha256": "40253a0a1c8c2b156d918e5b88f27df3cc97a2de86ef39e3538e6b433367463f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/PhysX/enabled.usda",
+      "size": 4528,
+      "hash": {
+        "sha256": "01bb6ae96ba8392c9a65f5bf090c2c23f961615082bf4d9d2fff713dba9396eb"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Physics/physics.usda",
+      "size": 4682,
+      "hash": {
+        "sha256": "448b82e290ebbb804c83b6b23f82579351fc13e02531ada6004dac21f9b8234b"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBR.mdl",
+      "size": 16010,
+      "hash": {
+        "sha256": "6e6b3acbccd236e21a6c29964a431d2a53e77251cc6b8b1bc975eb1c62da1781"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBRBase.mdl",
+      "size": 19369,
+      "hash": {
+        "sha256": "a8fd9fe174e91892e94d06da90ba453a124024c2ce2c033be9d82c9e2f76a3b7"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBR_ClearCoat.mdl",
+      "size": 29789,
+      "hash": {
+        "sha256": "d84c5ba482561c0eaea2e0c5b607358af549e36cd921773462f92dbc4f32cbc3"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/t_kitchenware_bowl_cream_e01_alb.png",
+      "size": 238974,
+      "hash": {
+        "sha256": "ebcb38884430affb632bec68da02d389ac096dcc8bd962721a1b7972ef404bcf"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/t_kitchenware_bowl_cream_e01_nor.png",
+      "size": 121187,
+      "hash": {
+        "sha256": "1f6588473cdec6ff962e27f1ca86965d2a58c43a8c9038257a0a5ffee4829719"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/t_kitchenware_bowl_cream_e01_orm.png",
+      "size": 128009,
+      "hash": {
+        "sha256": "edfddf42b99f5ebb78adfc3cfaf1218d41d152df88fa56b14cc3f63ea25cf82f"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/256x256/t_kitchenware_bowl_cream_e01_alb.png.png",
+      "size": 72116,
+      "hash": {
+        "sha256": "af37aa6913c1006246f1825c7a08c81655e09c6c6947a80c1e5078a4fc07a588"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/256x256/t_kitchenware_bowl_cream_e01_nor.png.png",
+      "size": 42235,
+      "hash": {
+        "sha256": "9875593abf5d3b05e05c6803901df63fd1abc93a2243e7a12612f6f3360fbd02"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/256x256/t_kitchenware_bowl_cream_e01_orm.png.png",
+      "size": 49848,
+      "hash": {
+        "sha256": "d52508c2f3d91cc2a2927487b7afb56eb656f46fc9cac5327f4a22180dabc888"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/512x512/t_kitchenware_bowl_cream_e01_alb.png.png",
+      "size": 260054,
+      "hash": {
+        "sha256": "dfce8c1e9edfe1868bf61d1cce276dd7d9254000c21bded1af3a515cf07ee8a9"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/512x512/t_kitchenware_bowl_cream_e01_nor.png.png",
+      "size": 157549,
+      "hash": {
+        "sha256": "34c3f314aac9fb97c8f3c48d5fc5c1b20a30befc2ced6c8b3dd1840f72e80129"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/.thumbs/512x512/t_kitchenware_bowl_cream_e01_orm.png.png",
+      "size": 164986,
+      "hash": {
+        "sha256": "13bd49c7a2b5e61489860cee7fd95b61a6882bf00d2e27cdd312f9ceda7b63c2"
+      }
+    }
+  ]
+}

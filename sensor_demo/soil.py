@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Visual soil: resting height field plus a bounded pool of 3D Warp PBD particles.
 
 The bucket is a prescribed, open triangle shell. There is no force feedback to

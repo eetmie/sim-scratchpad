@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Sensor contract shared by the sim (ros2_bridge.py) and the ROS side (launch files). Plain Python, no ROS imports.
 
 The real robot (kaivuriprokkis) publishes the same topics and frames; only the data source differs.

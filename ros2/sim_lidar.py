@@ -1,15 +1,16 @@
-"""Optional RTX lidars (EXCAVATOR_LIDARS=1; Kit side, imported by ros2_bridge.py).
+"""Read the two RTX lidars in demo_env.usd from Kit.
 
-The lidar prims in demo_env.usd (poses in sensors.LIDARS) get a 60 x 60 deg instant scan out to 0.8 m, set on the
-session layer. Scans are returned as sensor-frame points with excavator hits included, like a real lidar; the
-self-filter belongs on the ROS side. Same sensor settings as ../lidar_demo_script.py (the old proof of concept).
+Import ros2.sim_lidar after Kit starts, then call create(stage, "/World/excavator_bucket"). The 60 x 60 deg
+scan pattern and 0.8 m range are set on the session layer. new_scan returns Cartesian sensor-frame points
+including excavator hits. Call destroy when finished.
 """
 
 import numpy as np
-import sensors
 
 import omni.kit.app
 from pxr import Usd, Vt
+
+from .sensors import LIDARS
 
 FAR_M = 0.80
 STEP_DEG = 2.0  # ~28 mm between rays at 0.8 m
@@ -58,7 +59,7 @@ def create(stage, robot_path):
     """One render product + GenericModelOutput annotator per lidar in sensors.LIDARS."""
     lidars = []
     with Usd.EditContext(stage, stage.GetSessionLayer()):
-        for name, parent, *_ in sensors.LIDARS:
+        for name, parent, *_ in LIDARS:
             path = f"{robot_path}/{parent}/{name}"
             prim = stage.GetPrimAtPath(path)
             if not prim or prim.GetTypeName() != "OmniLidar":

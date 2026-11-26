@@ -1,0 +1,192 @@
+{
+  "format_version": "1.0",
+  "items": [
+    {
+      "relative_path": "simready_usd/sm_dishware_plastic_tray_a01_01.usd",
+      "size": 21555,
+      "hash": {
+        "sha256": "c23e5a29014119b4304203de49f1c6393f9de3e096a06437a5693a33df8ef77a"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/sm_dishware_plastic_tray_a01_01_thumbnail.png",
+      "size": 535133,
+      "hash": {
+        "sha256": "69fcb1719b4b018f4f092995483ee50817adce1ac7010a7ae8d34e963b1051a3"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_dishware_plastic_tray_a01_01.usd.png",
+      "size": 866550,
+      "hash": {
+        "sha256": "b1ecba0d4abb06f35b876f7a131df5818f709c23b168943b3213e6eb1c923b47"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_dishware_plastic_tray_a01_01.usd_light.png",
+      "size": 490245,
+      "hash": {
+        "sha256": "02c74799f4cf904a3dc5939038d4beb01f7e61fbdd1fb9edd2c6e0f8948b83ac"
+      }
+    },
+    {
+      "relative_path": "simready_usd/.thumbs/256x256/sm_dishware_plastic_tray_a01_01.usd_transparent.png",
+      "size": 490870,
+      "hash": {
+        "sha256": "c947925f939b38e84f8e5f6c7827cb246d5ec5b19d7685ecd93bf106d2c00397"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/t_plastic_glossy_white_a01_tile_nor.png",
+      "size": 10962433,
+      "hash": {
+        "sha256": "8e1b70073339a4110b7c5103273f2c1ce2b5dbf74352ae2e3eb91d7573f10cc5",
+        "sha256-first1m": "25349e73bc9cda946cc6408db8f9e8ad852f37accce89ee19d02fc1088174baf"
+      }
+    },
+    {
+      "relative_path": "simready_usd/Textures/t_plastic_glossy_white_a01_tile_orm.png",
+      "size": 12876795,
+      "hash": {
+        "sha256": "9a4389739da9ee7325972569e730a32a98ddeb6903d46a8d26fc0a136078f5ad",
+        "sha256-first1m": "82542434c62151885c46fdfc8833c6aafdb4383f3ce0fb6bf18cd41fcd019bd2"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/base.usda",
+      "size": 9216,
+      "hash": {
+        "sha256": "4f878ff01d4520b114cb4e0d20847b5c928aada1939fdda69092f6bd5ecb8e4a"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/geometries.usd",
+      "size": 1597151,
+      "hash": {
+        "sha256": "69641ebf01d13f065b6abffef33c1e1ced7c783ddfde5a33135f39f162c4c215",
+        "sha256-first1m": "cde46b9575a1029eae25787b36a3af3475bf03d75196275a6d85b548bee2a4eb"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances.usda",
+      "size": 5305,
+      "hash": {
+        "sha256": "bcbe56099e05fc915f717e1a41b9dd94b98785934b3262c83b666405169244d5"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_mujoco.usda",
+      "size": 5577,
+      "hash": {
+        "sha256": "b36ddd4740156107dac2583b95df0ec6c06d6208d6c8b8edf2717f994ae992aa"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_newton.usda",
+      "size": 5428,
+      "hash": {
+        "sha256": "fc4da5c04c6afc5dd1f74deb57e7fd8121cb7a38fccea2e2120ccc3ae2680f3e"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/instances_physx.usda",
+      "size": 5445,
+      "hash": {
+        "sha256": "e0ddab4e15c42ab145636ae653995bd5444f0257241e6c9aa66597d9d5ab1705"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/materials.usda",
+      "size": 9439,
+      "hash": {
+        "sha256": "88c6c55e57e51376d8c1f171e25db1d91d99d64aa159029cebdfc5bb8907d0a6"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/MuJoCo/disabled.usda",
+      "size": 4334,
+      "hash": {
+        "sha256": "4741d6265cbb35cff539daf5dfdeb638d7a1d48c99629b56bd6df2a54d4d11a1"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/MuJoCo/enabled.usda",
+      "size": 5072,
+      "hash": {
+        "sha256": "2b890de30907adc32e5437353483592a06bbe8b0ec0f7ef279b2a366d30f0d31"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Newton/disabled.usda",
+      "size": 4334,
+      "hash": {
+        "sha256": "4741d6265cbb35cff539daf5dfdeb638d7a1d48c99629b56bd6df2a54d4d11a1"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Newton/enabled.usda",
+      "size": 4894,
+      "hash": {
+        "sha256": "ade16a94e096102e16902a69e888a7936db54aaa053318bde1727fffb32f4070"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/PhysX/disabled.usda",
+      "size": 4334,
+      "hash": {
+        "sha256": "4741d6265cbb35cff539daf5dfdeb638d7a1d48c99629b56bd6df2a54d4d11a1"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/PhysX/enabled.usda",
+      "size": 4608,
+      "hash": {
+        "sha256": "8d1350fd41db99e02db924a76816f8a6ac6a32832b6a687c8f1fc8ded8592ce2"
+      }
+    },
+    {
+      "relative_path": "simready_usd/payloads/Physics/physics.usda",
+      "size": 4849,
+      "hash": {
+        "sha256": "55c833d1c2c4943e201a356c388b288eff48c552326eae3b68b9fb6264b15918"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBR.mdl",
+      "size": 16010,
+      "hash": {
+        "sha256": "6e6b3acbccd236e21a6c29964a431d2a53e77251cc6b8b1bc975eb1c62da1781"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBRBase.mdl",
+      "size": 19369,
+      "hash": {
+        "sha256": "a8fd9fe174e91892e94d06da90ba453a124024c2ce2c033be9d82c9e2f76a3b7"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/OmniPBR_ClearCoat.mdl",
+      "size": 29789,
+      "hash": {
+        "sha256": "d84c5ba482561c0eaea2e0c5b607358af549e36cd921773462f92dbc4f32cbc3"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/t_plastic_glossy_white_a01_tile_nor.png",
+      "size": 10962433,
+      "hash": {
+        "sha256": "8e1b70073339a4110b7c5103273f2c1ce2b5dbf74352ae2e3eb91d7573f10cc5",
+        "sha256-first1m": "25349e73bc9cda946cc6408db8f9e8ad852f37accce89ee19d02fc1088174baf"
+      }
+    },
+    {
+      "relative_path": "simready_usd/source_assets/t_plastic_glossy_white_a01_tile_orm.png",
+      "size": 12876795,
+      "hash": {
+        "sha256": "9a4389739da9ee7325972569e730a32a98ddeb6903d46a8d26fc0a136078f5ad",
+        "sha256-first1m": "82542434c62151885c46fdfc8833c6aafdb4383f3ce0fb6bf18cd41fcd019bd2"
+      }
+    }
+  ]
+}

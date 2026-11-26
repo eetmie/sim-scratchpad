@@ -1,0 +1,38 @@
+{
+  "format_version": "1.0",
+  "profile": "Package-Candidate",
+  "profile_version": "1.0.0",
+  "timestamp": "2026-10-09T06:12:07",
+  "assets": [
+    {
+      "asset": "simready_usd/sm_kitchenware_cup_d01_01.usd",
+      "features": [
+        {
+          "FET_031_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": []
+          }
+        },
+        {
+          "FET_033_STANDARD": {
+            "version": "0.1.0",
+            "passed": true,
+            "failing_requirements": [],
+            "dependencies": [
+              {
+                "FET_031_STANDARD": {
+                  "version": "0.1.0"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "content_hash": {
+    "sha256": "1350df46d7f552a57a3db4215fb92f0141b81b9ea3ac4454cbdef897f21b49e4"
+  }
+}

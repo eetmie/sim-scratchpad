@@ -1,0 +1,122 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary SimReady_Metadata = {
+            dictionary Variants = {
+                dictionary Physics = {
+                    dictionary MuJoCo = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "MuJoCo"
+                    }
+                    dictionary Newton = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "Newton"
+                    }
+                    dictionary PhysX = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "PhysX"
+                    }
+                }
+            }
+            string asset_location = "simready_content\\common_assets\\props_endeavor_kitchen\\dishware_cup_tea_a01\\simready_physx_usd\\sm_dishware_cup_tea_a01_01.usd"
+            string asset_type = "prop"
+            string uuid = "036aefe4-eeb6-49e0-8030-990badbbbc19"
+            dictionary validation = {
+                string profile = "Robotics-Prop"
+                string profile_version = "3.1.0"
+                dictionary validated_features = {
+                    dictionary "2026-02-20" = {
+                        dictionary FET000_CORE = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET001_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            string "failing requirements" = "['AA.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_NEUTRAL = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            string "failing requirements" = "['RB.MB.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_PHYSX': {'version': '0.1.0'}}, {'FET004_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            string "failing requirements" = "['RB.MB.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET005_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET006_BASE_MDL = {
+                            string dependencies = "[]"
+                            string "failing requirements" = "['VM.MDL.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                    }
+                }
+            }
+        }
+        string asset_dir = "simready_content/common_assets/props_endeavor_kitchen/dishware_cup_tea_a01"
+        string asset_name = "dishware_cup_tea_a01"
+        string asset_type = "prop"
+        string profile = "Prop-Robotics-Neutral"
+        string source_file = "../simready_usd/sm_dishware_cup_tea_a01_01.usd"
+        string usd_date_generated = "2026-02-20 16:37:19"
+        bool used_dsrs_exporter = 1
+    }
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Scope "Instances"
+{
+    def Xform "cupTea_01_mesh_00" (
+        prepend references = @./geometries.usd@</Geometries/cupTea_01_mesh_00>
+    )
+    {
+        over "cupTea_01_mesh_00" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI", "PhysicsMassAPI", "PhysxCollisionAPI", "PhysxSDFMeshCollisionAPI", "PhysicsMeshCollisionAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/cupTea_01_mesh_00/VisualMaterials/m_opaque__ceramic__smoothGlossy_a01>
+            uniform token physics:approximation = "sdf"
+            point3f physics:centerOfMass = (-0.019392528, 0.0000044005455, 0.054748196)
+            float3 physics:diagonalInertia = (0.0020410202, 0.0026987114, 0.0022498136)
+            float physics:mass = 1.348275
+            quatf physics:principalAxes = (1, 0, 0, 0)
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "m_opaque__ceramic__smoothGlossy_a01" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/m_opaque__ceramic__smoothGlossy_a01>
+            )
+            {
+            }
+        }
+    }
+}
+

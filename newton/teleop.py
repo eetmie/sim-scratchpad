@@ -1,6 +1,6 @@
 """Gamepad + keyboard input for both front ends.
 
-Kit: carb input from the Kit app window (as in ../excavator_teleop.py).
+Kit: carb input from the Kit app window.
 Newton viewer: the viewer's keyboard, and the first game controller through pyglet (SDL mapping),
 pumped here because the Newton viewer does not run pyglet's event loop.
 Both report the same stick axes (-1..1, right/up positive) and buttons.
@@ -10,6 +10,16 @@ import math
 
 DEADZONE = 0.20
 STICKS = ("left_x", "left_y", "right_x", "right_y")
+
+# Bluetooth Ultimate 2C uses Z/RZ for its right stick and GAS/BRAKE for
+# triggers. Pyglet's generic Linux fallback assumes RX/RY and loses the stick.
+CONTROLLER_MAPPINGS = (
+    "05000000c82d00001b30000001000000,8BitDo Ultimate 2C Wireless,"
+    "a:b0,b:b1,x:b4,y:b3,back:b10,start:b11,guide:b12,"
+    "leftshoulder:b6,rightshoulder:b7,leftstick:b13,rightstick:b14,"
+    "leftx:a0,lefty:a1,rightx:a2,righty:a3,lefttrigger:a5,righttrigger:a4,"
+    "dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8,platform:Linux,",
+)
 
 
 def apply_deadzone(value):
@@ -75,7 +85,11 @@ class NewtonViewerInput(_Source):
         self.controller = None
         try:
             import pyglet.input
+            from pyglet.input.controller import add_mappings_from_string, get_mapping
 
+            for mapping in CONTROLLER_MAPPINGS:
+                if get_mapping(mapping.partition(",")[0]) is None:
+                    add_mappings_from_string(mapping)
             controllers = pyglet.input.get_controllers()
             if controllers:
                 self.controller = controllers[0]

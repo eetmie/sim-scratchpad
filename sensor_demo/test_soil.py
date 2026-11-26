@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Physical checks without Kit, the robot asset, or a display.
 
 SOIL_TEST_DEVICE=cuda:0 selects the GPU; CPU is the default.

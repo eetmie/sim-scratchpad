@@ -1,0 +1,19 @@
+{
+  "format_version": "1.0",
+  "package_id": "simready.hf.nvidia.simready-assets.dishware_cup_paper_a01.2026.10.09_005650251491",
+  "license": "CC-BY-4.0",
+  "metadata": [
+    {
+      "name": "com.nvidia.simready.packaging.bom.json",
+      "hash": {
+        "sha256": "4465856ad3fe86f4d725a022ffe4d1abf93b9720fa812dee7fb59727f196104c"
+      }
+    }
+  ],
+  "content_hash": {
+    "sha256": "a11d2a682459cfa86b70cf3a0581211da03de05f80ab34fb54e209fd348c5eb2"
+  },
+  "package_hash": {
+    "sha256": "8b2a71f8be09a05fb906c176a969693b30b438b0ed84c423e76830e869233a03"
+  }
+}

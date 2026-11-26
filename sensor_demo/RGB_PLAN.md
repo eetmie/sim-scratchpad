@@ -1,7 +1,7 @@
 # RGB cameras: what was built and what is left
 
 `rgb.py` implements the native option of the original plan: `newton.sensors.SensorCamera` on a render-only
-model. The fallback hand-written shader was not needed. Measurements are in [runs/RESULTS.md](runs/RESULTS.md).
+model. The fallback hand-written shader was not needed. Measurements are in the [demo README](README.md#speed).
 
 ## How it works
 

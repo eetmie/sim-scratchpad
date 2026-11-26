@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """The Newton sim as the robot on the contract's ROS 2 topics (sensor_contract.py), stamped in simulation time.
 
 In:  /excavator/command            [slew, lift, tilt, scoop] valve demand in -1..1; stale after 150 ms = stop
@@ -10,7 +5,7 @@ Out: /clock, /joint_states         every physics step; raw joint angles [rad] ar
                                    /excavator/joint_angles is not published: ../ros2/joint_angles.py derives it)
      /excavator/cameras/<name>/image_raw   rgb8
      /excavator/heightmap, /excavator/heightmap/image   32FC1 [m] and mono8, the ground-truth map (on the robot
-                                   the depth -> FastDEM -> heightmap_image chain publishes these)
+                                   the native depth mapper publishes these)
      /excavator/episode            JSON: {"event": "start", task, layout...} / {"event": "end", success, ...}
      /excavator/command            only when the sim drives itself (--auto_dig), so a bag always holds the actions
 

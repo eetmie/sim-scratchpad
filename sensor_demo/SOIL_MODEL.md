@@ -1,8 +1,7 @@
-# Soil demo
+# Soil model and diagnostics
 
-A fixed excavator, gamepad/keyboard controls, and a 60 x 60 cm block of sand.
-Newton/MuJoCo-Warp drives the machine; a custom Warp particle solver handles disturbed soil.
-No ROS, lidar, or camera sensors. Default rendering is Newton OpenGL.
+A fixed excavator digs in a 60 x 60 cm sand pit. Newton/MuJoCo-Warp drives the machine and a custom
+Warp particle solver handles disturbed soil. These checks run from the [Newton sensor demo](README.md).
 Moving soil uses a smooth particle surface by default, shaded with the same rough,
 opaque material as the resting ground. `--soil_render grains` keeps the original grain view;
 `--soil_render both` overlays grains on the reconstructed surface for inspection.
@@ -10,16 +9,16 @@ opaque material as the resting ground. `--soil_render grains` keeps the original
 From **sim-scratchpad**, using the existing Isaac Lab environment:
 
 ```bash
-uv run --no-sync python soil_demo/demo.py
+uv run --no-sync python sensor_demo/demo.py
 ```
 
 Or from the Isaac Lab root:
 
 ```bash
-uv run --no-sync python scripts/sim-scratchpad/soil_demo/demo.py
+uv run --no-sync python scripts/sim-scratchpad/sensor_demo/demo.py
 ```
 
-The shared excavator asset must be at `../Isaac-hydraulic-actuator/assets/excavator_bucket.usd`.
+The shared excavator asset must be at `assets/excavator_bucket.usd`.
 Controls and mesh publishing reuse the helpers in `../newton/`.
 
 ## Controls
@@ -48,14 +47,14 @@ joint keyframes (`AUTO_DIG` in `demo.py`): the bucket opens, enters teeth-first 
 drags toward the machine while curling, then swings with the arm extended and dumps beside the block:
 
 ```bash
-uv run --no-sync python soil_demo/demo.py --auto_dig --max_steps 1920 --view soil
+uv run --no-sync python sensor_demo/demo.py --auto_dig --max_steps 1920 --view soil
 ```
 
 For a longer check, repeat three dig/lift/dump strokes on the same evolving soil,
 returning the arm between strokes, then observe 14 seconds of settling (80 seconds total):
 
 ```bash
-uv run --no-sync python soil_demo/demo.py --auto_dig --auto_cycles 3 --max_steps 9600 --view soil --record_dir soil_demo/runs/long
+uv run --no-sync python sensor_demo/demo.py --auto_dig --auto_cycles 3 --max_steps 9600 --view soil --record_dir sensor_demo/runs/long
 ```
 
 Multiple cycles last 22 seconds each, including the return motion. Soil is never reset
@@ -65,7 +64,7 @@ and soil at 60 Hz. The final joint targets hold after the requested cycles.
 Record a manual session, with upward-moving particles highlighted in red:
 
 ```bash
-uv run --no-sync python soil_demo/demo.py --view soil --debug_particles --record_dir soil_demo/runs/manual
+uv run --no-sync python sensor_demo/demo.py --view soil --debug_particles --record_dir sensor_demo/runs/manual
 ```
 
 The recorder writes:
@@ -86,7 +85,7 @@ The recorder writes:
 Generate plots after recording:
 
 ```bash
-uv run --no-sync python soil_demo/diagnostics.py soil_demo/runs/manual
+uv run --no-sync python sensor_demo/diagnostics.py sensor_demo/runs/manual
 ```
 
 This writes `summary.png` and, if an event occurred, `worst_event.png` showing the particle motion,
@@ -100,10 +99,10 @@ Event detection is a diagnostic heuristic, not a physical correctness test.
 For a headless cycle and numerical record:
 
 ```bash
-uv run --no-sync python soil_demo/demo.py --viz none --auto_dig --max_steps 1920 --no_realtime --record_dir soil_demo/runs/headless
+uv run --no-sync python sensor_demo/demo.py --viz none --auto_dig --max_steps 1920 --no_realtime --record_dir sensor_demo/runs/headless
 ```
 
-`--screenshot soil_demo/runs/final.png` saves the final Newton viewport. Captures use host
+`--screenshot sensor_demo/runs/final.png` saves the final Newton viewport. Captures use host
 readback, including on systems without CUDA/OpenGL interoperability. Recording and snapshots
 add overhead; compare performance with recording disabled too. The first active particle tick
 includes Warp compilation and should be excluded from timing comparisons.
@@ -113,14 +112,14 @@ uses a CUDA graph. Surface reconstruction requires CUDA.
 For detailed first-contact screenshots, use a short run and smaller capture interval:
 
 ```bash
-uv run --no-sync python soil_demo/demo.py --auto_dig --max_steps 288 --view soil --record_dir soil_demo/runs/contact --capture_every 0.1
+uv run --no-sync python sensor_demo/demo.py --auto_dig --max_steps 288 --view soil --record_dir sensor_demo/runs/contact --capture_every 0.1
 ```
 
 ## Model and tuning
 
-The resting soil is a 1 cm height grid over a hard floor at z=-0.135 m. Initially the sand block
-extends from x=0.25 to 0.85 m and y=-0.30 to 0.30 m, with its top at z=0.015 m (15 cm of sand, ~54 L).
-Its vertical sides slump toward a 34-degree angle of repose when the simulation starts.
+The resting soil is a 1 cm height grid over a hard floor at z=-0.135 m. The pit extends from
+x=0.25 to 0.85 m and y=-0.30 to 0.30 m, with its brim at z=0.015 m (15 cm deep, ~54 L when full).
+Uneven fills settle toward a 34-degree angle of repose during reset.
 
 Soil near the bucket becomes 3D particles with explicit bulk volumes. A spatial hash and
 position-based contact solver handle particle friction, the ground, and the bucket's open
@@ -189,9 +188,9 @@ crossings and initial-overlap energy are also checked. They require no display,
 Kit, robot asset, or gamepad:
 
 ```bash
-uv run --no-sync --with pytest python -m pytest soil_demo/test_soil.py -q -o markers=kitless
-SOIL_TEST_DEVICE=cuda:0 uv run --no-sync --with pytest python -m pytest soil_demo/test_soil.py -q -o markers=kitless
-uv run --no-sync --with pytest python -m pytest soil_demo/test_surface.py -q -o markers=kitless
+uv run --no-sync --with pytest python -m pytest sensor_demo/test_soil.py -q -o markers=kitless
+SOIL_TEST_DEVICE=cuda:0 uv run --no-sync --with pytest python -m pytest sensor_demo/test_soil.py -q -o markers=kitless
+uv run --no-sync --with pytest python -m pytest sensor_demo/test_surface.py -q -o markers=kitless
 ```
 
 The first command tests CPU stepping; the second runs the same checks on the GPU. Surface

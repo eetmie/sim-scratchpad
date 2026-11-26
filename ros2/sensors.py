@@ -1,4 +1,4 @@
-"""Sensor contract shared by the sim (ros2_bridge.py) and the ROS side (launch files). Plain Python, no ROS imports.
+"""Sensor definitions for ROS launch files, RTX lidar, and IR calibration tools.
 
 The real robot (kaivuriprokkis) publishes the same topics and frames; only the data source differs.
 Camera frames are depth (IR1) frames in optical convention: x right, y down, z forward.
@@ -28,8 +28,7 @@ DEPTH_CAMERAS = [
     ),
 ]
 DEPTH_SIZE = (640, 480)
-# The camera prims in demo_env.usd (under the parent link above). The bridge re-applies the pose and lens from
-# DEPTH_CAMERAS at startup, so this file stays the one source of truth for the sim and its TF frames.
+# Camera prim names in demo_env.usd. The stage owns the fitted IR mounts and intrinsics for IR capture.
 CAMERA_PRIMS = {"cabin": "cam_cabin", "arm": "cam_boom"}
 # shortcut: principal point at the image centre; the real ones are ~5 px off (325.5, 236.2). Fine while the sim
 # publishes a matching camera_info; set USD aperture offsets if sim/real pixels must line up exactly.
@@ -51,7 +50,7 @@ def camera_topic(name, leaf):
     return f"/excavator/cameras/{name}/{leaf}"
 
 
-# Lidars (optional, EXCAVATOR_LIDARS=1). Points are published in these frames, self hits included, like a real lidar.
+# Lidars. The RTX scan reader returns points in these frames, including self hits.
 # (name, parent URDF link, xyz m, quaternion xyzw): the USD prim poses in demo_env.usd.
 LIDARS = [
     ("lidar_cabin", "upper_carriage", (0.1138097, 0.0812657, 0.1700001), (0.0, 0.2907022, 0.0, 0.9568136)),

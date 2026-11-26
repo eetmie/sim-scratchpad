@@ -1,0 +1,123 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary SimReady_Metadata = {
+            dictionary Variants = {
+                dictionary Physics = {
+                    dictionary MuJoCo = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "MuJoCo"
+                    }
+                    dictionary Newton = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "Newton"
+                    }
+                    dictionary PhysX = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "PhysX"
+                    }
+                }
+            }
+            string asset_location = "simready_content\\common_assets\\props_kitchenware\\kitchenware_bowl_c01\\simready_physx_usd\\sm_kitchenware_bowl_c01_01.usd"
+            string asset_type = "prop"
+            string uuid = "94673eb7-d460-4379-993d-2a800de7eaa2"
+            dictionary validation = {
+                string profile = "Robotics-Prop"
+                string profile_version = "3.1.0"
+                dictionary validated_features = {
+                    dictionary "2025-12-15" = {
+                        dictionary FET000_CORE = {
+                            string dependencies = "[]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET001_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_NEUTRAL = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_PHYSX': {'version': '0.1.0'}}, {'FET004_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET005_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET006_BASE_MDL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                    }
+                }
+            }
+            dictionary wikidata = {
+                string curated_path = "bowl/ceramic_bowl"
+                string full_path = "entity/object/container/container/bowl/ceramic bowl"
+                string qcode = "Q125230875"
+            }
+        }
+        string asset_dir = "simready_content/common_assets/props_kitchenware/kitchenware_bowl_c01"
+        string asset_name = "kitchenware_bowl_c01"
+        string asset_type = "prop"
+        string profile = "Prop-Robotics-Neutral"
+        string source_file = "../simready_usd/sm_kitchenware_bowl_c01_01.usd"
+        string usd_date_generated = "2025-12-10 18:36:53"
+        bool used_dsrs_exporter = 1
+    }
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Scope "Instances"
+{
+    def Xform "sm_kitchenware_bowl_c01_mesh_00" (
+        prepend references = @./geometries.usd@</Geometries/sm_kitchenware_bowl_c01_mesh_00>
+    )
+    {
+        over "sm_kitchenware_bowl_c01_mesh_00" (
+            prepend apiSchemas = ["MaterialBindingAPI", "PhysicsCollisionAPI", "PhysicsMassAPI", "NewtonCollisionAPI", "PhysicsMeshCollisionAPI", "NewtonMeshCollisionAPI"]
+        )
+        {
+            custom rel material:binding
+            prepend rel material:binding = </Instances/sm_kitchenware_bowl_c01_mesh_00/VisualMaterials/m_opaque__ceramic__bowl_c01>
+            float newton:contactGap = 0
+            point3f physics:centerOfMass = (4.4034927e-8, -2.319632e-9, 0.031628)
+            float3 physics:diagonalInertia = (0.0025208325, 0.0025208339, 0.0041951174)
+            float physics:mass = 1.3208913
+            quatf physics:principalAxes = (1, 0, 0, 0)
+        }
+
+        def Scope "VisualMaterials"
+        {
+            def Material "m_opaque__ceramic__bowl_c01" (
+                instanceable = true
+                prepend references = @./materials.usda@</Materials/m_opaque__ceramic__bowl_c01>
+            )
+            {
+            }
+        }
+    }
+}
+

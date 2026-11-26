@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """The sand-moving task: an open container beside the robot, a randomised sand surface, and the instruction."""
 
 from pathlib import Path

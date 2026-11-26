@@ -1,11 +1,10 @@
-"""Everything ROS-side: robot_state_publisher, teleop, mapping and RViz, for the Isaac sim or the real robot
-(kaivuriprokkis native_stack/ros2/kaivuri_bridge.py), which publish the same topics.
+"""Robot state publisher, teleop and RViz for the Newton demo or the real robot.
 
-source /opt/ros/<distro>/setup.bash && source scripts/sim-scratchpad/ros2/ws/install/setup.bash
+source /opt/ros/<distro>/setup.bash
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ros2 launch scripts/sim-scratchpad/ros2/view_excavator.launch.py              # sim (sim time)
 ros2 launch scripts/sim-scratchpad/ros2/view_excavator.launch.py sim:=false   # robot (wall clock)
-mapping/teleop/rviz:=false leave those out. sim:=false also leaves out the sim-only sensor frames and joint_angles:
+teleop/rviz:=false leave those out. sim:=false also leaves out the sim-only sensor frames and joint_angles:
 the robot's bridge publishes its calibrated frames and its own /excavator/joint_angles.
 """
 
@@ -45,24 +44,14 @@ def generate_launch_description():
     # The robot's bridge publishes these itself; the sim derives them from /joint_states.
     frames.append(Node(executable=os.path.join(HERE, "joint_angles.py"), name="joint_angles", condition=SIM))
     return LaunchDescription(
-        [DeclareLaunchArgument("sim", default_value="true", description="true: Isaac sim (/clock); false: robot")]
+        [DeclareLaunchArgument("sim", default_value="true", description="true: Newton sim (/clock); false: robot")]
         + frames
         + [
             DeclareLaunchArgument("rviz", default_value="true"),
-            DeclareLaunchArgument("mapping", default_value="true"),
             DeclareLaunchArgument("teleop", default_value="true"),
-            DeclareLaunchArgument("calibration", default_value="", description="robot sand-calibration.json"),
             IncludeLaunchDescription(  # gamepad -> /excavator/command, which the sim drives the joints from
                 PythonLaunchDescriptionSource(os.path.join(HERE, "teleop.launch.py")),
                 condition=IfCondition(LaunchConfiguration("teleop")),
-            ),
-            IncludeLaunchDescription(  # self-filter + FastDEM, the same launch the robot runs
-                PythonLaunchDescriptionSource(os.path.join(HERE, "mapping.launch.py")),
-                launch_arguments={
-                    "use_sim_time": LaunchConfiguration("sim"),
-                    "calibration": LaunchConfiguration("calibration"),
-                }.items(),
-                condition=IfCondition(LaunchConfiguration("mapping")),
             ),
             Node(
                 package="robot_state_publisher",

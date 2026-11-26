@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Fixed excavator, hybrid soil, geometric lidars and cabin heightmaps. See README.md."""
 
 import argparse
@@ -38,7 +33,7 @@ from task import (
 from teleop import Teleop
 
 GROUND_Z = SoilConfig.ground  # the physics ground and the soil's hard ground must agree
-ROBOT_USD = HERE.parent.parent / "Isaac-hydraulic-actuator/assets/excavator_bucket.usd"
+ROBOT_USD = HERE.parent / "assets/excavator_bucket.usd"
 JOINT_AXES = {
     "revolute_carriage": ("left_x", "D", "A", -15.0),
     "revolute_tilt": ("left_y", "W", "S", -12.5),

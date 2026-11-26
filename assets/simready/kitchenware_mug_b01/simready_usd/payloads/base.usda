@@ -1,0 +1,243 @@
+#usda 1.0
+(
+    customLayerData = {
+        dictionary SimReady_Metadata = {
+            dictionary Variants = {
+                dictionary Physics = {
+                    dictionary MuJoCo = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "MuJoCo"
+                    }
+                    dictionary Newton = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "Newton"
+                    }
+                    dictionary PhysX = {
+                        string activateOption = "Enabled"
+                        string prim = "/RootNode"
+                        string variantSetName = "PhysX"
+                    }
+                }
+            }
+            string asset_location = "simready_content\\common_assets\\props_kitchenware\\kitchenware_mug_b01\\simready_physx_usd\\sm_kitchenware_mug_b01_01.usd"
+            string asset_type = "prop"
+            string uuid = "74b32e00-913b-4855-b8fc-15b1e5a34223"
+            dictionary validation = {
+                string profile = "Robotics-Prop"
+                string profile_version = "3.1.0"
+                dictionary validated_features = {
+                    dictionary "2026-05-20" = {
+                        dictionary FET000_CORE = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET001_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            string "failing requirements" = "['AA.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET003_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_NEUTRAL = {
+                            string dependencies = "[{'FET003_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            string "failing requirements" = "['RB.MB.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET004_BASE_PHYSX = {
+                            string dependencies = "[{'FET003_BASE_PHYSX': {'version': '0.1.0'}}, {'FET004_BASE_NEUTRAL': {'version': '0.1.0'}}]"
+                            string "failing requirements" = "['RB.MB.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                        dictionary FET005_BASE_NEUTRAL = {
+                            string dependencies = "[]"
+                            bool passed = 1
+                            string version = "0.1.0"
+                        }
+                        dictionary FET006_BASE_MDL = {
+                            string dependencies = "[]"
+                            string "failing requirements" = "['VM.MDL.001']"
+                            bool passed = 0
+                            string version = "0.1.0"
+                        }
+                    }
+                }
+            }
+        }
+        string asset_dir = "simready_content/common_assets/props_kitchenware/kitchenware_mug_b01"
+        string asset_name = "kitchenware_mug_b01"
+        string asset_type = "prop"
+        string profile = "Prop-Robotics-Neutral"
+        string source_file = "../simready_usd/sm_kitchenware_mug_b01_01.usd"
+        string usd_date_generated = "2026-05-20 15:43:19"
+        bool used_dsrs_exporter = 1
+    }
+    defaultPrim = "RootNode"
+    metersPerUnit = 1
+    subLayers = [
+        @./Physics/physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+def Xform "RootNode" (
+    prepend apiSchemas = ["SemanticsLabelsAPI:wikidata_class", "SemanticsLabelsAPI:wikidata_qcode"]
+    assetInfo = {
+        asset identifier = @../sm_kitchenware_mug_b01_01.usd@
+        string name = "sm_kitchenware_mug_b01_01"
+    }
+    customData = {
+        dictionary Blender = {
+            bool generated = 1
+        }
+        dictionary omni = {
+            dictionary cip = {
+                string timestamp = "2026-05-20 15:48:44"
+                string type = "prop"
+                dictionary validator = {
+                    string[] rules = []
+                    string version = "1.1.6"
+                }
+            }
+        }
+    }
+    kind = "component"
+)
+{
+    custom string omni:simready:documentation = "mug"
+    token[] semantics:labels:wikidata_class = ["mug"]
+    token[] semantics:labels:wikidata_qcode = ["Q386215"]
+
+    def Scope "Materials"
+    {
+    }
+
+    def Scope "Geometry"
+    {
+        def Xform "sm_kitchenware_mug_b01_obj_00"
+        {
+            custom bool _renamed = 1
+            custom string _renamed_as = "sm_kitchenware_mug_b01_obj_00"
+            custom double4 pxr:physics:principalAxes = (1, 0, 0, 0)
+            custom float3 pxr:usd:physics_centerofmass = (-0.0000052246005, -0.031947415, 0.053018525)
+            custom double3 pxr:usd:physics_inertia = (0.0042336011161591535, 0.0025529728641094265, 0.0040702902801680865)
+            custom double pxr:usd:physics_mass = 1.6088369233978597
+            float3 xformOp:rotateXYZ
+            float3 xformOp:scale
+            double3 xformOp:translate
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+            def Xform "sm_kitchenware_mug_b01_mesh_00" (
+                active = true
+                prepend apiSchemas = ["MaterialBindingAPI"]
+                instanceable = true
+                prepend references = @./instances.usda@</Instances/sm_kitchenware_mug_b01_mesh_00>
+            )
+            {
+                custom rel material:binding:physics = </RootNode/PhysicsMaterials/physics_mat_m_opaque__ceramic__mug_b01>
+            }
+
+            def Xform "Grasp_Point_1_1"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (-0.09843569993972778, 0, 0.04781964793801308)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "Grasp_Point_1_2"
+            {
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.09553632140159607, 0, 0.04781964793801308)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+            }
+
+            def Xform "grasp_identifier"
+            {
+                custom int intersection_face_index = 3635
+                custom float3 intersection_location = (-0.043616947, 0, 0.047819648)
+                custom float3 intersection_normal = (-0.9969418, 0.07814743, 0.0000015257214)
+                custom string intersection_object = "sm_kitchenware_mug_b01_obj_00"
+                custom bool intersections_dirty = 0
+                uniform token purpose = "guide"
+                token visibility = "invisible"
+                float3 xformOp:rotateXYZ = (0, 0, 0)
+                float3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0, 0, 0)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+
+                def BasisCurves "grasp_identifier_curve"
+                {
+                    int[] curveVertexCounts = [2]
+                    float3[] extent = [(-0.1034357, -0.005, 0.04281965), (0.100536324, 0.005, 0.052819647)]
+                    point3f[] points = [(-0.0984357, 0, 0.047819648), (0.09553632, 0, 0.047819648)]
+                    float[] primvars:tilt = [0, 0] (
+                        interpolation = "vertex"
+                    )
+                    uniform token purpose = "guide"
+                    uniform token type = "linear"
+                    float[] widths = [0.01, 0.01] (
+                        interpolation = "vertex"
+                    )
+                    uniform token wrap = "nonperiodic"
+                    float3 xformOp:rotateXYZ
+                    float3 xformOp:scale
+                    double3 xformOp:translate
+                    uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+                }
+            }
+        }
+    }
+
+    def Scope "ReferencePrims"
+    {
+        def Xform "Empty_joint_00" (
+            prepend apiSchemas = ["CollectionAPI:Empty_joint_00"]
+        )
+        {
+            custom bool _renamed = 1
+            custom string _renamed_as = "Empty_joint_00"
+            rel collection:Empty_joint_00:includes = </RootNode/Geometry/sm_kitchenware_mug_b01_obj_00>
+            float3 xformOp:rotateXYZ = (0, -0, 180)
+            float3 xformOp:scale = (1, 1, 1)
+            double3 xformOp:translate = (0, 0, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateXYZ", "xformOp:scale"]
+        }
+    }
+
+    def Scope "Grasp"
+    {
+    }
+
+    def Scope "PhysicsMaterials"
+    {
+        def Material "physics_mat_m_opaque__ceramic__mug_b01"
+        {
+        }
+    }
+
+    def Scope "Joints"
+    {
+    }
+
+    def Scope "VisualMaterials"
+    {
+    }
+}
+

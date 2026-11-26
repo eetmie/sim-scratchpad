@@ -1,0 +1,19 @@
+{
+  "format_version": "1.0",
+  "package_id": "simready.hf.nvidia.simready-assets.dishware_mug_coffee_a01.2026.10.09_005715571964",
+  "license": "CC-BY-4.0",
+  "metadata": [
+    {
+      "name": "com.nvidia.simready.packaging.bom.json",
+      "hash": {
+        "sha256": "dd18a8e818d00980cd9c70e4c9240bbeeea1bfccf96aa53469ca9620cc647591"
+      }
+    }
+  ],
+  "content_hash": {
+    "sha256": "fd752a50c80925bd0e0857c31c90f0328846a13c4d2ab27f8fbfb6a590506b97"
+  },
+  "package_hash": {
+    "sha256": "0c74b3f9a2fd3be7b246bc23b4ac7dd7120d673f773c92247e491588c9954ac3"
+  }
+}

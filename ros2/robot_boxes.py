@@ -1,7 +1,4 @@
-"""Robot self-filter boxes from the URDF meshes, plus small rotation helpers. Plain numpy, no ROS.
-
-mapping.launch.py passes link_boxes() to the C++ depth_to_cloud node as parameters (box_links, box_data).
-"""
+"""Load the exported robot description and derive self-filter boxes from its meshes."""
 
 import os
 import re

@@ -1,0 +1,19 @@
+{
+  "format_version": "1.0",
+  "package_id": "simready.hf.nvidia.simready-assets.kitchenware_mug_b01.2026.10.09_062254962899",
+  "license": "CC-BY-4.0",
+  "metadata": [
+    {
+      "name": "com.nvidia.simready.packaging.bom.json",
+      "hash": {
+        "sha256": "d086c8cd705b88948cd32e07ed4d15f50614ebba5d5642d9b51bf304f3d624f1"
+      }
+    }
+  ],
+  "content_hash": {
+    "sha256": "0569429f28f02d45e42a4dbb088d58730f7b20adb7c19e464aa9e4ae438bc7f7"
+  },
+  "package_hash": {
+    "sha256": "d619946bd7077584b7e9523739d51a7f2ba063f8ca594bd4108caf58f7501339"
+  }
+}

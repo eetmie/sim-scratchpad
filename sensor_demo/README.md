@@ -1,7 +1,5 @@
 # Newton soil sensor demo
 
-Copied from the updated `../soil_demo`; the original remains untouched. `SOURCE_SNAPSHOT.json`
-records hashes of that source. Your new digging keyframes, settling rules and spray filtering are retained.
 Newton/MuJoCo-Warp runs the fixed excavator; Warp runs the soil and geometric sensors. No ROS or Kit is needed.
 
 From **sim-scratchpad**, with the existing Isaac Lab uv environment:
@@ -72,11 +70,11 @@ sensor_demo/run_ros.sh --view cabin --seed 0            # in a shell with no /op
 | `/excavator/command` (in) | `std_msgs/Float32MultiArray` | | `[slew, lift, tilt, scoop]` valve demand in -1..1; stale after 150 ms (wall clock) = stop |
 | `/clock`, `/joint_states` | `rosgraph_msgs/Clock`, `sensor_msgs/JointState` | 120 Hz | every physics step; raw joint angles [rad], the state the datasets use |
 | `/excavator/cameras/cabin/image_raw` | `sensor_msgs/Image` rgb8 | 30 Hz | frame `cabin_camera`; `arm` too with `--rgb_cameras` |
-| `/excavator/heightmap`, `/excavator/heightmap/image` | `sensor_msgs/Image` 32FC1, mono8 | 5 Hz | the ground-truth map; on the robot depth -> FastDEM -> `heightmap_image.py` publishes these |
+| `/excavator/heightmap`, `/excavator/heightmap/image` | `sensor_msgs/Image` 32FC1, mono8 | 5 Hz | ground-truth height from the simulated soil surface |
 | `/excavator/episode` | `std_msgs/String` JSON | per reset | latched; `{"event": "start", "episode", "time_s", "task", layout...}` and `{"event": "end", "in_container_l", "success", "strokes"}` |
 
 - With `--ros` the joints follow `/excavator/command` only (`ros2/teleop_joy.py`, a policy, ...) and stop inside the
-  robot's joint-angle bounds, like the Isaac bridge. The window's sticks and keys no longer drive; B/R and Y/C still
+  robot's joint-angle bounds. The window's sticks and keys no longer drive; B/R and Y/C still
   reset. With `--auto_dig` the sim drives itself and publishes its commands on the same topic, so a bag always
   holds the actions.
 - Every reset ends the running episode and starts the next one. An episode is a success when at least
@@ -85,7 +83,7 @@ sensor_demo/run_ros.sh --view cabin --seed 0            # in a shell with no /op
   processes such as ros-excavator's policy node can source too); a system Lyrical talks to it over DDS with
   `RMW_IMPLEMENTATION=rmw_fastrtps_cpp` on both sides. At start the sim holds `/clock` at 1 ns for up to 5 s until
   a recorder listens: `ros2 bag record --use-sim-time` subscribes to nothing before it has seen a clock.
-- `ros2/view_excavator.launch.py mapping:=false` shows it in RViz. The sim does not publish the normalized
+- `ros2 launch ros2/view_excavator.launch.py` shows it in RViz. The sim does not publish the normalized
   `/excavator/joint_angles`; that launch's `ros2/joint_angles.py` derives it from `/joint_states` for anything
   that still wants it.
 - `run_ros.sh` sets `FASTDDS_BUILTIN_TRANSPORTS=LARGE_DATA`; a recorder needs the same (see the ros-excavator
@@ -232,7 +230,7 @@ processes when measuring performance.
 
 The source terrain/particle implementation and its tuning are described in [SOIL_MODEL.md](SOIL_MODEL.md).
 The sensor demo shares input/render helpers with `../newton` and robot meshes with `../ros2/urdf`; neither
-requires importing ROS. The robot asset remains at `../Isaac-hydraulic-actuator/assets/excavator_bucket.usd`
+requires importing ROS. The robot asset remains at `assets/excavator_bucket.usd`
 relative to sim-scratchpad. [RGB_PLAN.md](RGB_PLAN.md) records how the RGB cameras were built and what is left.
 
 ## Speed

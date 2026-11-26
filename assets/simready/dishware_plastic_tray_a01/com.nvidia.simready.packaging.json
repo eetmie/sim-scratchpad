@@ -1,0 +1,19 @@
+{
+  "format_version": "1.0",
+  "package_id": "simready.hf.nvidia.simready-assets.dishware_plastic_tray_a01.2026.10.09_005735977745",
+  "license": "CC-BY-4.0",
+  "metadata": [
+    {
+      "name": "com.nvidia.simready.packaging.bom.json",
+      "hash": {
+        "sha256": "4d83da3ec4590c136b3018344a31490d7dcb5c7938df7d81ea6d51615cb9c783"
+      }
+    }
+  ],
+  "content_hash": {
+    "sha256": "cf38ce6893d08fdff1ca51b4d74e09b5582f84ea6dfbe560aa8cacfeaf71be62"
+  },
+  "package_hash": {
+    "sha256": "1bbdccff21251f9883cf395b54457503ddc800dd5061e8d5c52df7f08c1865af"
+  }
+}
