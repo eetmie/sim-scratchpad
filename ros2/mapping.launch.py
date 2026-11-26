@@ -23,9 +23,15 @@ from launch_ros.actions import Node
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import sensors  # noqa: E402
+from arm_grid import GRID_LINKS, arm_params  # noqa: E402
 from robot_boxes import box_params, read_urdf  # noqa: E402
 
-CAMERAS = ["cabin"]
+CAMERAS = ["cabin", "arm"]  # FastDEM maps the cabin only (fastdem.yaml); arm points are for inspection
+# The robot's arm filter, from kaivuriprokkis native_stack/config/heightmap_pipeline.json (projection section).
+ARM_MARGINS_M = (0.090, 0.045, 0.100)  # boom, arm, bucket
+ARM_SILHOUETTE_PX = 8  # the robot's 2 strided cells at stride 4
+CAMERA_MASK_RADIUS_M = 0.09
+ARM_CAMERA_RULES = {"arm.min_view_deg": -5.0, "arm.min_forward_m": 0.24}
 
 
 def depth_correction(path):
@@ -44,30 +50,48 @@ def depth_correction(path):
     return params
 
 
-def depth_to_cloud(context, urdf, sim_time):
-    path = LaunchConfiguration("calibration").perform(context)
+def depth_to_cloud_params(calibration):
+    """depth_to_cloud parameters: self-filter (link boxes + the robot's arm filter) and optional depth correction."""
+    urdf = read_urdf(HERE)
+    return {
+        "cameras": CAMERAS,
+        "max_range_m": sensors.DEPTH_MAX_M,
+        **box_params(urdf, skip=("lower_carriage", *GRID_LINKS)),
+        **arm_params(
+            os.path.join(HERE, "urdf", "excavator.urdf"),
+            os.path.join(HERE, "arm_model.npz"),
+            ARM_MARGINS_M,
+            os.path.join(HERE, "ws", "arm_grids.bin"),
+        ),
+        "arm_silhouette_px": ARM_SILHOUETTE_PX,
+        "camera_mask_radius_m": CAMERA_MASK_RADIUS_M,
+        "camera_mask_frames": [sensors.camera_frame(n) for n, *_ in sensors.DEPTH_CAMERAS],
+        "base_frame": "upper_carriage",
+        **ARM_CAMERA_RULES,
+        **depth_correction(calibration),
+    }
+
+
+def depth_to_cloud(context, sim_time):
+    params = depth_to_cloud_params(LaunchConfiguration("calibration").perform(context))
     return [
         Node(
             package="excavator_depth_to_cloud",
             executable="depth_to_cloud",
             name="depth_to_cloud",
-            parameters=[
-                {"cameras": CAMERAS, "max_range_m": sensors.DEPTH_MAX_M, **box_params(urdf), **depth_correction(path)},
-                sim_time,
-            ],
+            parameters=[params, sim_time],
             output="screen",
         )
     ]
 
 
 def generate_launch_description():
-    urdf = read_urdf(HERE)
     sim_time = {"use_sim_time": LaunchConfiguration("use_sim_time")}
     return LaunchDescription(
         [
             DeclareLaunchArgument("use_sim_time", default_value="true"),
             DeclareLaunchArgument("calibration", default_value="", description="robot sand-calibration.json"),
-            OpaqueFunction(function=depth_to_cloud, args=[urdf, sim_time]),
+            OpaqueFunction(function=depth_to_cloud, args=[sim_time]),
             Node(
                 executable=os.path.join(HERE, "heightmap_image.py"),
                 name="heightmap_image",

@@ -12,13 +12,22 @@
 // y = (v - h/2) / (w/2) over the physical sensor pixel (mirrored back when the image is published turned 180 deg).
 // Parameters <camera>.correction_degree, <camera>.correction_coeffs (empty = off), <camera>.rotated_180.
 //
-// shortcut: one oriented box per link is loose for the bent boom (cuts air below the bend); upgrade to a distance
-// to the mesh (like the robot's arm_model.npz) if terrain under the boom goes missing from the map.
+// Robot arm filter (kaivuriprokkis heightmap_bench/mapper.py, settings from its config/heightmap_pipeline.json):
+// - arm_links / arm_data / arm_grid_file (arm_grid.py): boom, arm and bucket as the robot's arm_model.npz distance
+//   grids on their URDF links; a point within the link's margin is the robot. Those links' boxes are left out.
+// - arm_silhouette_px >= 0: also drop every pixel inside the projected arm model grown by this many pixels (stereo
+//   returns on the arm edge can carry ground depth). -1 = off.
+// - camera_mask_radius_m > 0: drop points within this of any camera_mask_frames origin (camera bodies and cables).
+// - <camera>.min_view_deg: skip the camera's image while its optical axis tips back past this in base_frame
+//   (0 = straight down, + forward, - toward the cabin). NaN = never.
+// - <camera>.min_forward_m: drop points nearer than this in front of the slew axis (base_frame x). NaN = keep all.
 
 #include <Eigen/Geometry>
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <fstream>
+#include <limits>
 #include <map>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -44,7 +53,27 @@ struct Box {
   Eigen::Matrix3f axes;          // principal axes as rows: local = axes * (p_link - center)
 };
 
+struct ArmGrid {
+  std::string link;
+  Eigen::Matrix3f A;  // grid frame q = A * p_link + b
+  Eigen::Vector3f b, lo;
+  int n[3];
+  float voxel;
+  uint8_t margin_mm;
+  std::vector<uint8_t> mm;              // distance to the link surface, C order [n0][n1][n2]
+  std::vector<Eigen::Vector3f> solid;   // occupied voxel centres, link frame (silhouette)
+
+  bool near(const Eigen::Vector3f& q) const {
+    const Eigen::Vector3f f = (q - lo) / voxel;
+    const int i = std::floor(f.x()), j = std::floor(f.y()), k = std::floor(f.z());
+    if (i < 0 || j < 0 || k < 0 || i >= n[0] || j >= n[1] || k >= n[2]) return false;
+    return mm[(static_cast<size_t>(i) * n[1] + j) * n[2] + k] < margin_mm;
+  }
+};
+
 struct Camera {
+  double min_view_deg = std::numeric_limits<double>::quiet_NaN();
+  double min_forward_m = std::numeric_limits<double>::quiet_NaN();
   int correction_degree = 0;
   std::vector<double> correction_coeffs;  // empty: no depth correction
   bool rotated_180 = false;
@@ -122,8 +151,16 @@ class DepthToCloud : public rclcpp::Node {
     const auto cameras = declare_parameter("cameras", std::vector<std::string>{"cabin"});
     const auto links = declare_parameter("box_links", std::vector<std::string>{});
     const auto data = declare_parameter("box_data", std::vector<double>{});
-    if (links.empty() || data.size() != 15 * links.size())
-      throw std::runtime_error("box_links / box_data missing or mismatched (mapping.launch.py sets them)");
+    if (data.size() != 15 * links.size())
+      throw std::runtime_error("box_links / box_data mismatched (mapping.launch.py sets them)");
+    loadArm(declare_parameter("arm_links", std::vector<std::string>{}),
+            declare_parameter("arm_data", std::vector<double>{}), declare_parameter("arm_grid_file", std::string{}));
+    if (links.empty() && arms_.empty())
+      throw std::runtime_error("no self-filter: set box_links/box_data and/or arm_links/arm_data");
+    silhouette_px_ = declare_parameter("arm_silhouette_px", -1);
+    camera_radius_ = declare_parameter("camera_mask_radius_m", 0.0);
+    camera_frames_ = declare_parameter("camera_mask_frames", std::vector<std::string>{});
+    base_frame_ = declare_parameter("base_frame", std::string("upper_carriage"));
     for (size_t i = 0; i < links.size(); ++i) {
       const double* d = &data[15 * i];
       Box b;
@@ -138,6 +175,8 @@ class DepthToCloud : public rclcpp::Node {
       c.correction_degree = declare_parameter(name + ".correction_degree", 3);
       c.correction_coeffs = declare_parameter(name + ".correction_coeffs", std::vector<double>{});
       c.rotated_180 = declare_parameter(name + ".rotated_180", false);
+      c.min_view_deg = declare_parameter(name + ".min_view_deg", c.min_view_deg);
+      c.min_forward_m = declare_parameter(name + ".min_forward_m", c.min_forward_m);
       if (!c.correction_coeffs.empty()) {
         correctionTable(c, 2, 2);  // validates degree vs. coefficient count now, not on the first image
         RCLCPP_INFO(get_logger(), "%s: depth correction, degree %d", name.c_str(), c.correction_degree);
@@ -149,10 +188,80 @@ class DepthToCloud : public rclcpp::Node {
       c.depth_sub = create_subscription<Image>(topic(name, "depth/image_raw"), 1,
                                                [this, name](Image::ConstSharedPtr m) { onDepth(name, *m); });
     }
-    RCLCPP_INFO(get_logger(), "%zu self-filter boxes, padding %.3f m, stride %ld", boxes_.size(), padding, stride_);
+    RCLCPP_INFO(get_logger(), "%zu self-filter boxes, padding %.3f m, %zu arm grids, silhouette %ld px, stride %ld",
+                boxes_.size(), padding, arms_.size(), silhouette_px_, stride_);
   }
 
  private:
+  void loadArm(const std::vector<std::string>& links, const std::vector<double>& data, const std::string& path) {
+    constexpr size_t kStride = 20;  // A(9) b(3) lo(3) shape(3) voxel margin_m, see arm_grid.py
+    if (links.empty()) return;
+    if (data.size() != kStride * links.size()) throw std::runtime_error("arm_links / arm_data mismatched");
+    std::ifstream f(path, std::ios::binary);
+    if (!f) throw std::runtime_error("cannot open arm_grid_file " + path);
+    for (size_t l = 0; l < links.size(); ++l) {
+      const double* d = &data[kStride * l];
+      ArmGrid g;
+      g.link = links[l];
+      g.A = Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(d).cast<float>();
+      g.b = Eigen::Vector3d(d[9], d[10], d[11]).cast<float>();
+      g.lo = Eigen::Vector3d(d[12], d[13], d[14]).cast<float>();
+      for (int i = 0; i < 3; ++i) g.n[i] = static_cast<int>(d[15 + i]);
+      g.voxel = d[18];
+      g.margin_mm = static_cast<uint8_t>(std::min(255.0, std::round(d[19] * 1000.0)));
+      g.mm.resize(static_cast<size_t>(g.n[0]) * g.n[1] * g.n[2]);
+      if (!f.read(reinterpret_cast<char*>(g.mm.data()), g.mm.size()))
+        throw std::runtime_error(path + ": shorter than arm_data's grid shapes");
+      for (int i = 0; i < g.n[0]; ++i)
+        for (int j = 0; j < g.n[1]; ++j)
+          for (int k = 0; k < g.n[2]; ++k)
+            if (!g.mm[(static_cast<size_t>(i) * g.n[1] + j) * g.n[2] + k])
+              g.solid.push_back(g.A.transpose() * (g.lo + (Eigen::Vector3f(i, j, k).array() + 0.5f).matrix() * g.voxel - g.b));
+      arms_.push_back(std::move(g));
+    }
+    if (f.peek() != EOF) throw std::runtime_error(path + ": longer than arm_data's grid shapes");
+  }
+
+  // Strided-cell mask of the arm model's image, grown by silhouette_px_ (mapper.py arm_silhouette, per pixel).
+  std::vector<uint8_t> silhouette(const std::vector<Eigen::Isometry3f>& cam_link, float fx, float fy, float cx,
+                                  float cy, int gw, int gh) const {
+    std::vector<uint8_t> sil(static_cast<size_t>(gw) * gh, 0);
+    for (size_t a = 0; a < arms_.size(); ++a)
+      for (const auto& p : arms_[a].solid) {
+        const Eigen::Vector3f c = cam_link[a] * p;
+        if (c.z() <= 0.05f) continue;
+        const long u = std::lround((fx * c.x() / c.z() + cx) / stride_), v = std::lround((fy * c.y() / c.z() + cy) / stride_);
+        if (u >= 0 && v >= 0 && u < gw && v < gh) sil[v * gw + u] = 1;
+      }
+    for (long it = 0; it < (silhouette_px_ + stride_ - 1) / stride_; ++it) {  // 4-neighbour growth, one cell a pass
+      auto grown = sil;
+      for (int v = 0; v < gh; ++v)
+        for (int u = 0; u < gw; ++u)
+          if (sil[v * gw + u]) {
+            if (u > 0) grown[v * gw + u - 1] = 1;
+            if (u + 1 < gw) grown[v * gw + u + 1] = 1;
+            if (v > 0) grown[(v - 1) * gw + u] = 1;
+            if (v + 1 < gh) grown[(v + 1) * gw + u] = 1;
+          }
+      sil.swap(grown);
+    }
+    return sil;
+  }
+
+  // target <- source at the image stamp; false (and a throttled warning) when TF has no answer.
+  bool lookup(const std::string& camera, const std::string& target, const Image& msg, Eigen::Isometry3f& out) {
+    try {
+      out = tf2::transformToEigen(tf_buffer_.lookupTransform(target, msg.header.frame_id, msg.header.stamp,
+                                                             rclcpp::Duration::from_seconds(0.3)))
+                .cast<float>();
+      return true;
+    } catch (const tf2::TransformException& e) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s: no TF %s <- %s at the image stamp: %s",
+                           camera.c_str(), target.c_str(), msg.header.frame_id.c_str(), e.what());
+      return false;
+    }
+  }
+
   void onDepth(const std::string& name, const Image& msg) {
     Camera& c = cameras_.at(name);
     if (!c.info || msg.encoding != "16UC1") return;
@@ -166,18 +275,37 @@ class DepthToCloud : public rclcpp::Node {
     // Box frames in the camera frame at the image stamp: local = R * p_cam + t.
     std::vector<Eigen::Matrix3f> rot(boxes_.size());
     std::vector<Eigen::Vector3f> trans(boxes_.size());
+    // Any missing TF returns: never publish unfiltered points, the boom would become terrain.
+    Eigen::Isometry3f link_cam;
     for (size_t i = 0; i < boxes_.size(); ++i) {
-      try {
-        const auto tf = tf_buffer_.lookupTransform(boxes_[i].link, msg.header.frame_id, msg.header.stamp,
-                                                   rclcpp::Duration::from_seconds(0.3));
-        const Eigen::Isometry3f link_cam = tf2::transformToEigen(tf).cast<float>();
-        rot[i] = boxes_[i].axes * link_cam.linear();
-        trans[i] = boxes_[i].axes * (link_cam.translation() - boxes_[i].center);
-      } catch (const tf2::TransformException& e) {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "%s: no TF %s <- %s at the image stamp: %s",
-                             name.c_str(), boxes_[i].link.c_str(), msg.header.frame_id.c_str(), e.what());
-        return;  // never publish unfiltered points: the boom would become terrain
+      if (!lookup(name, boxes_[i].link, msg, link_cam)) return;
+      rot[i] = boxes_[i].axes * link_cam.linear();
+      trans[i] = boxes_[i].axes * (link_cam.translation() - boxes_[i].center);
+    }
+    // Arm grids: q = A (link_cam p) + b.
+    std::vector<Eigen::Matrix3f> arm_rot(arms_.size());
+    std::vector<Eigen::Vector3f> arm_trans(arms_.size());
+    std::vector<Eigen::Isometry3f> cam_link(arms_.size());
+    for (size_t a = 0; a < arms_.size(); ++a) {
+      if (!lookup(name, arms_[a].link, msg, link_cam)) return;
+      arm_rot[a] = arms_[a].A * link_cam.linear();
+      arm_trans[a] = arms_[a].A * link_cam.translation() + arms_[a].b;
+      cam_link[a] = link_cam.inverse();
+    }
+    std::vector<Eigen::Vector3f> other_cams;  // camera-frame origins of the camera bodies to mask
+    if (camera_radius_ > 0)
+      for (const auto& frame : camera_frames_) {
+        if (frame == msg.header.frame_id) continue;
+        Eigen::Isometry3f frame_cam;
+        if (!lookup(name, frame, msg, frame_cam)) return;
+        other_cams.push_back(frame_cam.inverse().translation());
       }
+    const bool view_rule = std::isfinite(c.min_view_deg), forward_rule = std::isfinite(c.min_forward_m);
+    Eigen::Isometry3f base_cam = Eigen::Isometry3f::Identity();
+    if ((view_rule || forward_rule) && !lookup(name, base_frame_, msg, base_cam)) return;
+    if (view_rule) {  // looking back, this camera sees the machine and far clutter, not the dig area
+      const Eigen::Vector3f axis = base_cam.linear().col(2);
+      if (std::atan2(axis.x(), -axis.z()) * 180.0 / M_PI < c.min_view_deg) return;
     }
     const auto tf_done = std::chrono::steady_clock::now();
 
@@ -186,6 +314,13 @@ class DepthToCloud : public rclcpp::Node {
     const float* corr = c.k.empty() ? nullptr : c.k.data();
     const auto& K = c.info->k;
     const float fx = K[0], cx = K[2], fy = K[4], cy = K[5], max_sq = max_range_ * max_range_;
+    const int gw = (msg.width + stride_ - 1) / stride_, gh = (msg.height + stride_ - 1) / stride_;
+    const auto sil = silhouette_px_ >= 0 && !arms_.empty()
+                         ? silhouette(cam_link, fx, fy, cx, cy, gw, gh)
+                         : std::vector<uint8_t>{};
+    const float camera_sq = camera_radius_ * camera_radius_;
+    const Eigen::Vector3f base_x = base_cam.linear().row(0).transpose();
+    const float base_x0 = base_cam.translation().x(), min_forward = forward_rule ? c.min_forward_m : 0.0f;
     std::vector<float> kept, self;
     kept.reserve(3 * (msg.width / stride_ + 1) * (msg.height / stride_ + 1));
     for (uint32_t v = 0; v < msg.height; v += stride_) {
@@ -200,7 +335,10 @@ class DepthToCloud : public rclcpp::Node {
         }
         const Eigen::Vector3f p((u - cx) / fx * z, (v - cy) / fy * z, z);
         if (p.squaredNorm() >= max_sq) continue;
-        bool robot = false;
+        if (forward_rule && base_x.dot(p) + base_x0 < min_forward) continue;  // nearer than the cabin camera sees
+        bool robot = !sil.empty() && sil[(v / stride_) * gw + u / stride_];
+        for (size_t a = 0; a < arms_.size() && !robot; ++a) robot = arms_[a].near(arm_rot[a] * p + arm_trans[a]);
+        for (size_t i = 0; i < other_cams.size() && !robot; ++i) robot = (p - other_cams[i]).squaredNorm() < camera_sq;
         for (size_t i = 0; i < boxes_.size() && !robot; ++i)
           robot = ((rot[i] * p + trans[i]).cwiseAbs().array() <= boxes_[i].half.array()).all();
         auto& out = robot ? self : kept;
@@ -227,6 +365,11 @@ class DepthToCloud : public rclcpp::Node {
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;  // own node + thread, so lookups can wait inside this callback
   std::vector<Box> boxes_;
+  std::vector<ArmGrid> arms_;
+  int64_t silhouette_px_ = -1;
+  double camera_radius_ = 0.0;
+  std::vector<std::string> camera_frames_;
+  std::string base_frame_;
   std::map<std::string, Camera> cameras_;
   int64_t stride_;
   double max_range_;
