@@ -1,5 +1,7 @@
 # Sim scratchpad
 
+(slop README, I'll prune this later. As of now only the soil simulation integration is missing, performance measured without it...)
+
 **30 Hz IR and 5 Hz heightmaps in RViz** on an NVIDIA GeForce RTX 5070 Laptop GPU (75 W maximum).
 In a 25-second headless Isaac Sim replay at real-time speed with RViz open, a local ROS
 subscriber measured **29.95 Hz per IR camera** and **5.00 Hz for both heightmaps and the
