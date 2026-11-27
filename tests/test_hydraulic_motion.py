@@ -18,7 +18,9 @@ def test_gamepad_cli_and_replay_are_separate():
     assert args.replay is None and args.ir_width == 224
     assert parse_arguments(["--mode", "gamepad", "--nodynamics"]).nodynamics
     assert parse_arguments(["--replay", "custom.json"]).mode == "replay"
-    for argv in (["--mode", "gamepad", "--ros"], ["--nodynamics"], ["--ir-width", "0"]):
+    live = parse_arguments(["--mode", "gamepad", "--ros", "--ros-cameras"])
+    assert (live.ros_time, live.ir_width) == ("wall", 224)
+    for argv in (["--nodynamics"], ["--ir-width", "0"]):
         with pytest.raises(SystemExit):
             parse_arguments(argv)
 

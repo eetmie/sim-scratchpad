@@ -10,13 +10,14 @@ uv run --no-sync python launch_3dgs.py --mode replay
 
 The demo's **Excavator cameras and terrain** window shows 224x168 cabin/boom IR,
 the front map and the accumulated surrounding map, with Viewport 1 disabled.
-Raw depth is hidden; it remains 640x480 for mapping. `--mode gamepad` enables
+The live demo renders 320×240 depth by default. `--mode gamepad` enables
 arm/slew MLP valve control; `--nodynamics` bypasses the models. See the main README
 for controls and control-timing reports. The stationary `--depth-maps` diagnostic
 still shows depth previews. **The default is the real robot's
 masking, cabin-first fusion and FastDEM**, shared with the offline comparison
-through `robot_mapping.py`. Capture uses full 640x480 images; the robot's stride-4
-projection produces 160x120 depth/mask previews in the stationary diagnostic.
+through `robot_mapping.py`. Native 640×480 depth at stride 4, demo 320×240
+at stride 2 and 160×120 at stride 1 each give a 160×120 projection grid.
+Use `--depth-divisor 1|2|4` to select one. The stationary diagnostic defaults to native depth.
 Red marks self-filtered pixels there.
 The maps target the simulator profile's 5 Hz, subject to GPU and capture time.
 The sensors follow the live USD link transforms. Physics
@@ -88,7 +89,7 @@ Rows decrease X and columns decrease Y. Heights are int16 millimetres, with
 ground 128, -120 mm 16, +120 mm 240, unknown black. No holes are inpainted.
 
 `latest.npz` contains one capture: the three grids above, `depth_cabin_z16` and
-`depth_arm_z16` (uint16, 480x640), `optical_to_world_cabin` and
+`depth_arm_z16` (uint16, height × width from the active depth intrinsics), `optical_to_world_cabin` and
 `optical_to_world_arm` (column-vector 4x4 matrices, metres), filtered
 `points_world_m` (Nx3, sampled at the profile's `mapping_pixel_stride`), and
 `stamp_s` (elapsed wall time). Unlike the dataset's

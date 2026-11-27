@@ -20,6 +20,14 @@ def test_adapter_discovery_prefers_cache_and_preserves_existing_builds(tmp_path,
 
     monkeypatch.setattr(robot_mapping, "ROOT", tmp_path)
     relative = "build-mingw/fastdem_replay.exe" if os.name == "nt" else "build/fastdem_replay"
+    repo = tmp_path / "robot"
+    adapter = repo / "native_stack/tools/heightmap_bench" / os.path.basename(relative)
+    adapter.parent.mkdir(parents=True)
+    adapter.touch()
+    monkeypatch.setenv("KAIVURI_REPO", str(repo))
+    assert fastdem_binary() == adapter.resolve()
+    with pytest.raises(FileNotFoundError, match="FastDEM not found"):
+        fastdem_binary(repo=tmp_path / "different-checkout")
     legacy = tmp_path / "logs/fastdem" / relative
     cached = tmp_path / ".cache/fastdem" / relative
     legacy.parent.mkdir(parents=True)

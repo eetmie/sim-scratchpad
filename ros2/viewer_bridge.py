@@ -8,18 +8,18 @@ import json
 import math
 
 import numpy as np
-from scipy.spatial.transform import Rotation
-
 from ros2.map_contract import FRONT_FRAME, SURROUND_FRAME, depth_millimetres, grid_points, height_image, height_metres
+from scipy.spatial.transform import Rotation
 
 
 class ViewerRosBridge:
-    def __init__(self, profile, *, clock_mode, cameras=False, depth=False, cloud_hz=2.0):
+    def __init__(self, profile, *, clock_mode, cameras=False, depth=False, cloud_hz=None):
         # Import only after the launcher's ROS environment/Isaac bridge is ready.
         import rclpy
         from builtin_interfaces.msg import Time
         from geometry_msgs.msg import TransformStamped
         from rclpy.context import Context
+        from rclpy.executors import SingleThreadedExecutor
         from rclpy.qos import DurabilityPolicy, QoSProfile
         from rclpy.signals import SignalHandlerOptions
         from rosgraph_msgs.msg import Clock
@@ -27,9 +27,9 @@ class ViewerRosBridge:
         from std_msgs.msg import Header, String
         from tf2_ros import TransformBroadcaster
 
-        if not math.isfinite(cloud_hz) or cloud_hz < 0:
+        if cloud_hz is not None and (not math.isfinite(cloud_hz) or cloud_hz < 0):
             raise ValueError("ROS cloud frequency must be finite and nonnegative")
-        self.rclpy, self.profile, self.cloud_hz = rclpy, profile, cloud_hz
+        self.profile, self.cloud_hz = profile, cloud_hz
         self.types = dict(
             Time=Time,
             TransformStamped=TransformStamped,
@@ -46,6 +46,8 @@ class ViewerRosBridge:
         self.context = Context()
         rclpy.init(args=[], context=self.context, signal_handler_options=SignalHandlerOptions.NO)
         self.node = rclpy.create_node("isaac_terrain", context=self.context)
+        self.executor = SingleThreadedExecutor(context=self.context)
+        self.executor.add_node(self.node)
         self.tf = TransformBroadcaster(self.node)
         self.publishers = {}
         self.last_cloud_ns = None
@@ -74,7 +76,8 @@ class ViewerRosBridge:
             ("age", "/fastdem/mapping/age"),
         ):
             publisher(key, Image, topic)
-        if cloud_hz:
+        if cloud_hz != 0:
+            self.node.declare_parameter("publish_map_cloud", True)
             publisher("cloud", PointCloud2, "/fastdem/mapping/cloud")
         for name in ("cabin", "arm"):
             prefix = f"/excavator/cameras/{name}"
@@ -122,7 +125,7 @@ class ViewerRosBridge:
         self.publishers["clock"].publish(self.types["Clock"](clock=self.time(stamp_ns)))
 
     def spin(self):
-        self.rclpy.spin_once(self.node, timeout_sec=0)
+        self.executor.spin_once(timeout_sec=0)
 
     def image(self, key, pixels, encoding, stamp_ns, frame):
         pixels = np.ascontiguousarray(pixels)
@@ -164,6 +167,10 @@ class ViewerRosBridge:
         self.publishers["episode"].publish(self.types["String"](data=json.dumps(payload)))
 
     def publish(self, arrays, state, *, stamp_ns, episode=0, source_ns=None):
+        self.publish_exposure(arrays, state, stamp_ns=stamp_ns, episode=episode, source_ns=source_ns)
+        self.publish_maps(arrays, stamp_ns)
+
+    def publish_exposure(self, arrays, state, *, stamp_ns, episode, source_ns):
         if self.node.count_publishers("/clock") > 1:
             raise RuntimeError("Another /clock publisher is active. Use a separate ROS_DOMAIN_ID for this run.")
         if self.last_stamp_ns is not None and stamp_ns <= self.last_stamp_ns:
@@ -206,6 +213,12 @@ class ViewerRosBridge:
                 header=self.header(stamp_ns), name=list(state["joints"]), position=list(state["joints"].values())
             )
         )
+        for name, (pixels, intr) in state["images"].items():
+            frame = f"{name}_ir_optical"
+            self.image(f"ir_{name}", pixels, "mono8", stamp_ns, frame)
+            self.camera_info(f"ir_info_{name}", intr, stamp_ns, frame)
+
+    def publish_maps(self, arrays, stamp_ns):
         limit = self.profile["height_color_limit_m"]
         for key, frame in (("front", FRONT_FRAME), ("surround", SURROUND_FRAME)):
             self.image(key, height_metres(arrays[f"{key}_mm"]), "32FC1", stamp_ns, frame)
@@ -216,7 +229,12 @@ class ViewerRosBridge:
         if (
             cloud is not None
             and cloud.get_subscription_count()
-            and (self.last_cloud_ns is None or stamp_ns - self.last_cloud_ns >= 1e9 / self.cloud_hz)
+            and self.node.get_parameter("publish_map_cloud").value
+            and (
+                self.cloud_hz is None
+                or self.last_cloud_ns is None
+                or stamp_ns - self.last_cloud_ns >= 1e9 / self.cloud_hz
+            )
         ):
             geometry = self.profile["surround"]
             points = grid_points(
@@ -239,23 +257,22 @@ class ViewerRosBridge:
                 )
             )
             self.last_cloud_ns = stamp_ns
-        for name, (pixels, intr) in state["images"].items():
-            frame = f"{name}_ir_optical"
-            self.image(f"ir_{name}", pixels, "mono8", stamp_ns, frame)
-            self.camera_info(f"ir_info_{name}", intr, stamp_ns, frame)
         for name in ("cabin", "arm"):
             if f"depth_{name}" not in self.publishers:
                 continue
             sensor = self.profile["sensors"][name]
             frame = f"{name}_camera"
+            if self.publishers[f"depth_{name}"].get_subscription_count():
+                self.image(
+                    f"depth_{name}", depth_millimetres(arrays[f"depth_{name}_z16"], sensor), "16UC1", stamp_ns, frame
+                )
+            if not self.publishers[f"depth_info_{name}"].get_subscription_count():
+                continue
             intr = {
                 **sensor["depth_intrinsics"],
                 "cx": sensor["depth_intrinsics"]["ppx"],
                 "cy": sensor["depth_intrinsics"]["ppy"],
             }
-            self.image(
-                f"depth_{name}", depth_millimetres(arrays[f"depth_{name}_z16"], sensor), "16UC1", stamp_ns, frame
-            )
             self.camera_info(f"depth_info_{name}", intr, stamp_ns, frame)
 
     def close(self):
@@ -264,5 +281,6 @@ class ViewerRosBridge:
 
             self.event("end", self.episode, self.last_stamp_ns)
             self.publishers["episode"].wait_for_all_acked(Duration(seconds=0.5))
+        self.executor.shutdown()
         self.node.destroy_node()
         self.context.try_shutdown()

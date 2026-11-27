@@ -8,12 +8,14 @@ from pathlib import Path
 from . import BASE_STAGE
 
 
-def ir_image(rgba, info):
+def ir_image(rgba, info, *, allow_flat=False):
     import cv2
     import numpy as np
 
     gray = cv2.cvtColor(rgba, cv2.COLOR_RGBA2GRAY)
     if gray.min() == gray.max():
+        if allow_flat:
+            return gray
         raise RuntimeError("Renderer returned a flat IR image")
     if info["image_rotation_deg"] == 180:
         gray = cv2.rotate(gray, cv2.ROTATE_180)

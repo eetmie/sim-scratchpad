@@ -30,6 +30,21 @@ def configuration_files(dataset=None, session=0, *, config=None):
     return directory / "heightmaps.json", {key: directory / f"{name}.json" for name, key in STREAMS.items()}
 
 
+def reduced_depth_sensor(sensor, divisor):
+    """Preserve optical FOV, pixel centres, depth units and stored orientation."""
+    intr = sensor["depth_intrinsics"]
+    if divisor not in (1, 2, 4) or intr["width"] % divisor or intr["height"] % divisor:
+        raise ValueError("Depth divisor must be 1, 2 or 4 and divide both sensor dimensions")
+    if divisor == 1:
+        return sensor
+    scaled = dict(intr, width=intr["width"] // divisor, height=intr["height"] // divisor)
+    for key in ("fx", "fy"):
+        scaled[key] = intr[key] / divisor
+    for key in ("ppx", "ppy"):
+        scaled[key] = (intr[key] + 0.5) / divisor - 0.5
+    return {**sensor, "depth_intrinsics": scaled}
+
+
 def load_profile(dataset=None, session=0, *, config=None):
     metadata, files = configuration_files(dataset, session, config=config)
     meta = json.loads(metadata.read_text(encoding="utf-8"))

@@ -8,38 +8,56 @@ import logging
 import math
 import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack
+from itertools import pairwise
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(headless: bool, *, sensor_only: bool = False):
+def create_app(headless: bool, *, sensor_only: bool = False, synchronized_cameras: bool = False):
     """Start Isaac Sim using the desktop application's versioned shader caches."""
     from isaacsim import SimulationApp
 
+    extra_args = [
+        "--/rtx/shaderDb/shaderCachePath="
+        "${omni_global_cache}/shaders/shadercache/${kit_version_short}/${kit_git_hash}/${config}",
+        "--/rtx/shaderDb/driverShaderCachePath="
+        "${omni_global_cache}/shaders/nv_shadercache/${kit_version_short}/${kit_git_hash}",
+    ]
+    if synchronized_cameras:
+        # Finish the paused pose's render before reading its depth and IR buffers.
+        extra_args.extend(
+            [
+                "--/rtx/hydra/supportMultiTickRate=false",
+                "--/app/hydraEngine/waitIdle=true",
+                "--/app/updateOrder/checkForHydraRenderComplete=1000",
+            ]
+        )
     return SimulationApp(
         {
             "headless": headless,
             "disable_viewport_updates": sensor_only,
             "multi_gpu": False,
             "renderer": "RealTimePathTracing",
-            "extra_args": [
-                "--/rtx/shaderDb/shaderCachePath="
-                "${omni_global_cache}/shaders/shadercache/${kit_version_short}/${kit_git_hash}/${config}",
-                "--/rtx/shaderDb/driverShaderCachePath="
-                "${omni_global_cache}/shaders/nv_shadercache/${kit_version_short}/${kit_git_hash}",
-            ],
+            "extra_args": extra_args,
         }
     )
 
 
 def ros_arguments(parser):
     parser.add_argument("--ros", action="store_true", help="Publish local robot maps, TF and /clock over ROS 2.")
+    parser.add_argument(
+        "--uncapped", action="store_true", help="Capture each ROS frame as soon as possible, preserving its data clock."
+    )
     parser.add_argument("--ros-cameras", action="store_true", help="Also render/publish calibrated mono8 IR images.")
     parser.add_argument(
         "--ros-depth", action="store_true", help="Also publish raw depth, converted to ROS millimetres."
     )
-    parser.add_argument("--ros-cloud-hz", type=float, default=2.0, help="Map cloud rate in data time; 0 disables it.")
+    parser.add_argument(
+        "--ros-cloud-hz", type=float, help="Optional cap on the subscribed terrain cloud; default: every map, 0: off."
+    )
     parser.add_argument(
         "--ros-time",
         choices=("auto", "fixed", "wall"),
@@ -54,15 +72,15 @@ def validate_ros_arguments(parser, args):
         args.depth_maps = True
         if args.mapping != "robot":
             parser.error("--ros requires the robot mapping backend (FastDEM)")
-    elif args.ros_cameras or args.ros_depth or args.ros_time != "auto":
-        parser.error("--ros-cameras, --ros-depth and --ros-time require --ros")
-    if any(not math.isfinite(v) or v < 0 for v in (args.ros_cloud_hz, args.ros_start_delay)):
+    elif args.ros_cameras or args.ros_depth or args.ros_time != "auto" or args.uncapped:
+        parser.error("--ros-cameras, --ros-depth, --ros-time and --uncapped require --ros")
+    if any(not math.isfinite(v) or v < 0 for v in (args.ros_start_delay, args.ros_cloud_hz) if v is not None):
         parser.error("ROS cloud frequency and discovery delay must be finite and nonnegative")
 
 
 def start_ros(args, stage, depth_mapping, replay, app):
     if not args.ros:
-        return None, None, None
+        return None
     from ros2.map_contract import FrameClock
     from ros2.viewer_bridge import ViewerRosBridge
     from ros2.viewer_scene import ViewerScene
@@ -84,21 +102,181 @@ def start_ros(args, stage, depth_mapping, replay, app):
         depth=args.ros_depth,
         cloud_hz=args.ros_cloud_hz,
     )
-    scene = None
     try:
-        scene = ViewerScene(stage, cameras=args.ros_cameras)
+        scene = ViewerScene(stage)
         logger.info("ROS maps enabled; clock=%s, IR=%s, raw depth=%s", clock.mode, args.ros_cameras, args.ros_depth)
         discovery_deadline = time.monotonic() + args.ros_start_delay
         while app.is_running() and time.monotonic() < discovery_deadline:
             bridge.clock(1_000_000_000)
             bridge.spin()
             app.update()
+        return RosFrames(depth_mapping, scene, bridge, clock, headless=args.headless)
     except BaseException:
-        if scene is not None:
-            scene.close()
         bridge.close()
         raise
-    return bridge, scene, clock
+
+
+class RosFrames:
+    """Render on the Kit thread. One ordered worker can map and publish during the next render."""
+
+    def __init__(self, mapping, scene, bridge, clock, *, headless):
+        self.mapping, self.scene, self.bridge, self.clock = mapping, scene, bridge, clock
+        self.pool = ThreadPoolExecutor(1, thread_name_prefix="ros-mapping") if headless else None
+        self.pending = None
+        self.count = 0
+        self.mapping.wait_for_map = self.wait
+
+    def update(self, episode, source_ns):
+        frame = self.mapping.capture_robot()
+        if frame is None:
+            return False
+        start = time.perf_counter()
+        snapshot = self.scene.sample(frame.arrays, self.mapping.ir_views)
+        frame.timings["ros_scene_ms"] = (time.perf_counter() - start) * 1000
+        stamp = self.clock.stamp(self.count, int(frame.arrays["capture_host_monotonic_ns"]))
+        frame.arrays["ros_stamp_ns"] = stamp
+        self.wait()
+        if self.pool is None:
+            self._publish(frame, snapshot, stamp, episode, source_ns)
+        else:
+            self.pending = self.pool.submit(self._publish, frame, snapshot, stamp, episode, source_ns)
+        self.count += 1
+        return True
+
+    def _publish(self, frame, snapshot, stamp, episode, source_ns):
+        self.mapping.map_robot(frame)
+        if self.pool is None:
+            self.mapping.show_robot_maps(frame)
+        start = time.monotonic()
+        self.bridge.publish(frame.arrays, snapshot, stamp_ns=stamp, episode=episode, source_ns=source_ns)
+        end = time.monotonic()
+        frame.timings.update(ros_publish_ms=(end - start) * 1000, capture_to_publish_ms=(end - frame.started) * 1000)
+        self.mapping.record_robot_frame(frame)
+
+    def wait(self):
+        if self.pending is not None:
+            self.pending.result()
+            self.pending = None
+
+    def close(self):
+        try:
+            if self.pool is not None:
+                self.pool.shutdown(wait=True)
+            self.wait()
+        finally:
+            self.bridge.close()
+
+
+class LiveSensors:
+    """Pace IR exposures in wall time and map the depth from the first exposure due per map period."""
+
+    def __init__(self, mapping, ros):
+        self.mapping, self.ros = mapping, ros
+        self.ir_hz = mapping.robot_policy.policy["capture"]["ir_fps"]
+        self.map_hz = mapping.capture_hz
+        self.origin = None
+        self.slot = self.map_slot = -1
+        self.pool = ThreadPoolExecutor(1, thread_name_prefix="live-mapping")
+        self.pending = None
+        self.ir_stamps = deque(maxlen=10000)
+        self.map_stamps = deque(maxlen=10000)
+        self.mapping.wait_for_map = self.wait
+
+    @classmethod
+    def for_viewer(cls, mapping, ros):
+        if not (mapping and mapping.ir_views and mapping.robot_policy and mapping.capture_hz):
+            return None
+        if ros and ros.clock.mode != "wall":
+            return None
+        if not 0 < mapping.capture_hz <= mapping.robot_policy.policy["capture"]["ir_fps"]:
+            return None
+        live = cls(mapping, ros)
+        logger.info("Live sensor targets: %g Hz IR, %g Hz depth/maps", live.ir_hz, live.map_hz)
+        return live
+
+    def pace(self):
+        if self.origin is None:
+            self.origin = time.monotonic()
+        next_slot = self.slot + 1
+        delay = self.origin + next_slot / self.ir_hz - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+        self.slot = max(next_slot, math.floor((time.monotonic() - self.origin) * self.ir_hz))
+
+    def update(self, episode, source_ns):
+        map_slot = math.floor(self.slot * self.map_hz / self.ir_hz)
+        frame = None
+        if map_slot > self.map_slot:
+            frame = self.mapping.capture_robot(force=True)
+            self.map_slot = map_slot
+        else:
+            self.mapping.capture(with_depth=False)
+        arrays = frame.arrays if frame is not None else self.mapping.capture_clock
+        acquired = int(arrays["capture_host_monotonic_ns"])
+        self.ir_stamps.append(acquired)
+        snapshot = stamp = None
+        if self.ros:
+            start = time.perf_counter()
+            snapshot = self.ros.scene.sample(arrays, self.mapping.ir_views)
+            stamp = self.ros.clock.stamp(self.ros.count, acquired)
+            self.ros.count += 1
+            if frame is not None:
+                arrays["ros_stamp_ns"] = stamp
+                frame.timings["ros_scene_ms"] = (time.perf_counter() - start) * 1000
+        if frame is not None:
+            self.map_stamps.append(acquired)
+        if self.ros or frame is not None:
+            self.wait()
+            self.pending = self.pool.submit(self._publish, frame, arrays, snapshot, stamp, episode, source_ns)
+        elif self.pending is not None and self.pending.done():
+            self.wait()
+        return True
+
+    def _publish(self, frame, arrays, snapshot, stamp, episode, source_ns):
+        if self.ros:
+            start = time.monotonic()
+            if frame is not None:
+                # ROS services need executor callbacks; DDS image publication proceeds on every exposure.
+                self.ros.bridge.spin()
+            self.ros.bridge.publish_exposure(arrays, snapshot, stamp_ns=stamp, episode=episode, source_ns=source_ns)
+            if frame is not None:
+                frame.timings["ros_exposure_ms"] = (time.monotonic() - start) * 1000
+        if frame is not None:
+            self.mapping.map_robot(frame)
+            if self.ros:
+                start = time.monotonic()
+                self.ros.bridge.publish_maps(arrays, stamp)
+                end = time.monotonic()
+                frame.timings.update(
+                    ros_map_publish_ms=(end - start) * 1000, capture_to_publish_ms=(end - frame.started) * 1000
+                )
+            self.mapping.record_robot_frame(frame)
+        return frame
+
+    def wait(self):
+        if self.pending is not None:
+            frame = self.pending.result()
+            self.pending = None
+            if frame is not None:
+                self.mapping.show_robot_maps(frame)
+
+    def close(self):
+        try:
+            self.wait()
+        finally:
+            self.pool.shutdown()
+            self.mapping.wait_for_map = None
+
+    def report(self):
+        from hydraulic_motion import percentiles
+
+        report = {}
+        for name, stamps in (("ir", self.ir_stamps), ("map", self.map_stamps)):
+            # The first exposure initializes the renderer and host buffers.
+            intervals = [(b - a) * 1e-6 for a, b in pairwise(list(stamps)[1:])]
+            if intervals:
+                report[name] = {"hz": 1000 * len(intervals) / sum(intervals), "period_ms": percentiles(intervals)}
+        return report
 
 
 def parse_arguments(argv: list[str] | None = None):
@@ -125,7 +303,15 @@ def parse_arguments(argv: list[str] | None = None):
     parser.add_argument(
         "--actuator-repo", type=Path, help="Isaac-hydraulic-actuator checkout (default: sibling checkout)."
     )
-    parser.add_argument("--ir-width", type=int, default=224, help="Demo IR image width; aspect ratio is preserved.")
+    parser.add_argument(
+        "--ir-width", type=int, help="IR image width (demo 224, ROS cameras 640), preserving field of view."
+    )
+    parser.add_argument(
+        "--depth-divisor",
+        type=int,
+        choices=(1, 2, 4),
+        help="Divide native depth width/height and adjust the mapper's pixel stride. IR size is independent.",
+    )
     parser.add_argument("--show-viewport", action="store_true", help="Enable the full scene viewport for diagnostics.")
     mapping_arguments(parser)
     ros_arguments(parser)
@@ -138,17 +324,28 @@ def parse_arguments(argv: list[str] | None = None):
         args.depth_maps = True
     if args.mode == "replay":
         args.replay = args.replay or DEMO_REPLAY
-    if args.mode == "gamepad" and args.ros:
-        parser.error("Gamepad mode is currently non-ROS; use --mode replay with --ros")
+    if args.mode == "gamepad" and args.ros and args.ros_time == "auto":
+        args.ros_time = "wall"
     if args.nodynamics and args.mode != "gamepad":
         parser.error("--nodynamics applies to --mode gamepad")
+    if args.depth_divisor is None:
+        live_view = (args.mode and not args.ros) or (args.ros_cameras and args.ros_time == "wall")
+        args.depth_divisor = (
+            2
+            if live_view
+            and args.mapping == "robot"
+            and not (args.dataset or args.config or args.ros_depth or args.uncapped)
+            else 1
+        )
+    if args.ir_width is None:
+        args.ir_width = 640 if args.ros_cameras and args.mode != "gamepad" else 224
     if args.ir_width < 16:
         parser.error("--ir-width must be at least 16")
-    if args.mode and not args.ros and args.snapshot and not args.show_viewport:
+    if args.mode and (not args.ros or args.mode == "gamepad") and args.snapshot and not args.show_viewport:
         parser.error("--snapshot captures the scene viewport; add --show-viewport, or use exported ir_*.png")
     validate_ros_arguments(parser, args)
-    if args.frames < 0 or (args.headless and not args.frames):
-        parser.error("--headless requires --frames > 0; --frames must not be negative")
+    if args.frames < 0 or (args.headless and not args.frames and not args.ros):
+        parser.error("Use --frames > 0 or --ros for headless operation; --frames must not be negative")
     return args
 
 
@@ -216,7 +413,8 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
 
     args = parse_arguments(argv)
     if args.depth_maps and args.mapping == "robot":
-        args.robot_repo, args.fastdem = robot_checkout(args.robot_repo), fastdem_binary(args.fastdem)
+        args.robot_repo = robot_checkout(args.robot_repo)
+        args.fastdem = fastdem_binary(args.fastdem, repo=args.robot_repo)
     replay = load_replay(args.replay) if args.replay else None
     if replay:
         replay_times = [(f["timestamp_ns"] - replay[0]["timestamp_ns"]) * 1e-9 for f in replay]
@@ -236,15 +434,19 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
         if asset.read(4) != b"PK\x03\x04":
             raise ValueError("Room scan is not a USDZ archive. Fetch it with git lfs pull.")
 
-    sensor_only = bool(args.mode and not args.ros and not args.show_viewport)
-    app = create_app(args.headless, sensor_only=sensor_only)
+    sensor_only = args.headless and not args.snapshot if args.ros else bool(args.mode)
+    sensor_only = (sensor_only or args.mode == "gamepad") and not args.show_viewport
+    app = create_app(args.headless, sensor_only=sensor_only, synchronized_cameras=bool(args.mode or args.ros))
     depth_mapping = None
-    ros_bridge = ros_scene = ros_clock = None
+    ros_frames = None
+    live = None
     worker = None
+    cleanup = ExitStack()
+    cleanup.callback(lambda: app.close(exit_code=exit_code))
     frame_ms = deque(maxlen=10000)
-    report_due = 0
     exit_code = 0
     try:
+        import omni.timeline
         import omni.usd
 
         context = omni.usd.get_context()
@@ -268,49 +470,52 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
                 args.depth_out,
                 args.ground_z,
                 panel=not args.headless,
-                ir_width=args.ir_width if args.mode and not args.ros else None,
+                depth_divisor=args.depth_divisor,
+                ir_width=args.ir_width if args.ros_cameras or (args.mode and not args.ros) else None,
                 robot_repo=args.robot_repo,
                 fastdem=args.fastdem,
                 mapping=args.mapping,
                 config=args.config,
+                uncapped=args.uncapped,
             )
+            cleanup.callback(depth_mapping.close)
             logger.info("D435i depth and terrain maps enabled; save directory: %s", args.depth_out.resolve())
 
         if args.mode == "gamepad":
             joints, worker, command_source = create_motion(args, stage, command_source)
 
-        ros_bridge, ros_scene, ros_clock = start_ros(args, stage, depth_mapping, replay, app)
+        ros_frames = start_ros(args, stage, depth_mapping, replay, app)
+        if ros_frames:
+            cleanup.callback(ros_frames.close)
+        live = LiveSensors.for_viewer(depth_mapping, ros_frames)
+        if live:
+            cleanup.callback(live.close)
+        stream = live or ros_frames
 
         logger.info("Opened %s; Gaussian splats: %s", stage_path, [str(prim.GetPath()) for prim in splats])
         logger.info(
             "Display: %s. Close the Isaac Sim window to exit.",
-            "cabin/boom IR + terrain maps; viewport disabled" if sensor_only else str(viewport.camera_path),
+            "scene viewport disabled" if sensor_only else str(viewport.camera_path),
         )
+        timeline = omni.timeline.get_timeline_interface() if worker is not None or ros_frames is not None else None
         frame = 0
-        ros_sample = 0
         replay_started, previous_loop, replay_ops = time.monotonic(), 0, {}
         while app.is_running() and (not args.frames or frame < args.frames):
             frame_started = time.perf_counter()
+            if live:
+                live.pace()
+            if timeline and timeline.is_playing():
+                raise RuntimeError("Keep physics paused while capturing kinematic USD poses for gamepad or ROS")
             if worker is not None:
-                import omni.timeline
-
-                if omni.timeline.get_timeline_interface().is_playing():
-                    raise RuntimeError("Gamepad motion owns USD poses; keep the physics timeline paused")
                 command, reset = command_source()
                 joints.apply(worker.sample(command, reset))
                 if reset:
                     depth_mapping.clear()
-            if ros_bridge is not None:
-                import omni.timeline
-
-                if omni.timeline.get_timeline_interface().is_playing():
-                    raise RuntimeError(
-                        "ROS viewer reads paused USD/replay poses. Keep physics paused for consistent TF."
-                    )
-                ros_bridge.spin()
+            if ros_frames is not None and not live:
+                ros_frames.bridge.spin()
             if replay:
-                if ros_clock is not None and ros_clock.mode == "replay":
-                    loop, index = divmod(ros_sample, len(replay))
+                if ros_frames is not None and ros_frames.clock.mode == "replay":
+                    loop, index = divmod(ros_frames.count, len(replay))
                 else:
                     elapsed = time.monotonic() - replay_started
                     loop = int(elapsed / replay_duration)
@@ -322,39 +527,36 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
             frame += 1
             # A depth capture already pumps Kit and renders through Replicator.
             # Service the ordinary viewport only when no capture was due.
-            captured = depth_mapping is not None and depth_mapping.update()
+            if stream:
+                captured = stream.update(loop if replay else 0, replay[index]["timestamp_ns"] if replay else None)
+            else:
+                captured = depth_mapping is not None and depth_mapping.update()
             if not captured:
                 app.update()
-            elif ros_bridge is not None:
-                arrays = depth_mapping.latest
-                stamp_ns = ros_clock.stamp(ros_sample, int(arrays["capture_host_monotonic_ns"]))
-                arrays["ros_stamp_ns"] = stamp_ns
-                ros_bridge.publish(
-                    arrays,
-                    ros_scene.sample(arrays),
-                    stamp_ns=stamp_ns,
-                    episode=loop if replay else 0,
-                    source_ns=replay[index]["timestamp_ns"] if replay else None,
-                )
-                ros_sample += 1
             if worker is not None and worker.started is None:
                 # Exclude shader/camera initialization from the live control timing.
                 worker.start()
+                report_start, report_frame, report_samples = time.monotonic(), frame, depth_mapping.sample_count
             frame_ms.append((time.perf_counter() - frame_started) * 1000)
-            if worker is not None and time.monotonic() >= report_due:
+            now = time.monotonic()
+            if worker is not None and now - report_start >= 5:
+                elapsed = now - report_start
                 report = worker.report()
                 inference = report["inference_ms"].get("p95", 0)
                 status = (
                     f"Control {report['achieved_hz']:.1f} Hz | MLP p95 {inference:.2f} ms | "
-                    f"render loop {1000 / (sum(frame_ms) / len(frame_ms)):.1f} Hz | "
+                    f"{'IR' if live else 'viewer loop'} {(frame - report_frame) / elapsed:.1f} Hz | "
+                    f"maps {(depth_mapping.sample_count - report_samples) / elapsed:.1f} Hz | "
                     f"dropped {report['dropped_wall_s']:.3f} s | clips {report['velocity_clip_steps']}"
                 )
                 logger.info(status)
                 if depth_mapping.window:
-                    depth_mapping.control_status.text = status + "\nB / R: reset"
-                report_due = time.monotonic() + 5
+                    depth_mapping.control_status.text = status + " | B / R: reset"
+                report_start, report_frame, report_samples = now, frame, depth_mapping.sample_count
             if args.snapshot and frame == min(args.frames or 120, 120):
                 save_snapshot(app, viewport, args.snapshot)
+        if live and worker is None:
+            (args.depth_out / "sensor_rates.json").write_text(json.dumps(live.report(), indent=2) + "\n")
         if depth_mapping is not None:
             depth_mapping.save()
             logger.info("Saved D435i depth and terrain maps to %s", args.depth_out.resolve())
@@ -363,7 +565,7 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
         exit_code = 1
         raise
     finally:
-        try:
+        with cleanup:
             if worker is not None:
                 worker.close()
                 from hydraulic_motion import percentiles
@@ -371,6 +573,7 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
                 report = worker.report()
                 report.update(
                     render_loop_ms=percentiles(frame_ms),
+                    sensor_rates=live.report() if live else {},
                     dynamics=not args.nodynamics,
                     viewport_enabled=not sensor_only,
                     ir_width=args.ir_width,
@@ -378,20 +581,6 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
                 args.depth_out.mkdir(parents=True, exist_ok=True)
                 (args.depth_out / "control_performance.json").write_text(json.dumps(report, indent=2) + "\n")
                 logger.info("Control timing: %s", json.dumps(report))
-        finally:
-            try:
-                try:
-                    if ros_scene is not None:
-                        ros_scene.close()
-                finally:
-                    try:
-                        if ros_bridge is not None:
-                            ros_bridge.close()
-                    finally:
-                        if depth_mapping is not None:
-                            depth_mapping.close()
-            finally:
-                app.close(exit_code=exit_code)
 
 
 if __name__ == "__main__":

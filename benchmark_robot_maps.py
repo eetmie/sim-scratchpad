@@ -130,7 +130,7 @@ def assess_sim(args, report):
 
 def run(args):
     args.robot_repo = robot_checkout(args.robot_repo)
-    args.fastdem = fastdem_binary(args.fastdem)
+    args.fastdem = fastdem_binary(args.fastdem, repo=args.robot_repo)
     source = json.loads((args.dataset / f"native/episode-{args.episode:06d}/source.json").read_text())
     table = pq.read_table(
         args.dataset / "data/chunk-000/file-000.parquet",

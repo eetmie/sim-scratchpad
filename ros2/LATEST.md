@@ -16,10 +16,11 @@ environment. Clone the matching `kaivuriprokkis` checkout as well. Camera/filter
 settings and the small motion demo are included; no dataset copy is required. The existing
 `ros2/setup_ws.sh` is for the separate ROS-side depth mapper; it is unnecessary here.
 
-Build the ROS-free FastDEM adapter on Ubuntu (the Windows executable cannot be reused):
+Set `KAIVURI_REPO` to your robot checkout in the simulator terminal. If the
+checkout lacks a native Linux adapter, build one in the scratchpad.
 
 ```bash
-export KAIVURI_REPO="$HOME/Documents/GitHub/kaivuriprokkis"  # adapt to the Ubuntu checkout
+export KAIVURI_REPO="$HOME/GitHub/kaivuriprokkis"  # use your checkout location
 uv run --no-sync --with cmake --with ninja python build_fastdem.py --robot-repo "$KAIVURI_REPO"
 ```
 
@@ -27,13 +28,27 @@ In a **clean simulator terminal**, without `/opt/ros/*` sourced:
 
 ```bash
 export ROS_DOMAIN_ID=42
-bash ros2/run_latest.sh --mode replay --robot-repo "$KAIVURI_REPO"
+bash ros2/run_latest.sh --headless --mode replay --ros-cameras --ir-width 224
 ```
 
+For a live demo add `--ros-time wall`. The bundled profile targets both IR
+images at 30 Hz and both FastDEM maps at 5 Hz. To use an attached gamepad in
+Kit while RViz displays the topics, run
+`bash ros2/run_latest.sh --mode gamepad --ros-cameras --ir-width 224`.
+The bundled replay contains 5 Hz poses. To see motion at camera cadence, use
+the recorded-plan command below with `--stride 1 --timestamps ir`.
+
+For a paired replay benchmark add `--uncapped` to capture as fast as the renderer
+and mapper allow. In source-time replay the bundled profile otherwise paces
+paired captures at 5 Hz. Replay headers keep the
+original exposure times. Add `--frames 280 --depth-out logs/ros-rviz/pre-soil`
+to save stage timings and complete a repeatable benchmark.
+[Headless performance journal](../DEVELOPING.md#headless-performance-journal-2026-11-27)
+
 `run_latest.sh` selects Isaac's bundled Jazzy and Fast DDS using the existing `ros_env.sh`.
-`--ros` implies `--depth-maps` and requires the robot backend. Its default Linux adapter
-path is `.cache/fastdem/build/fastdem_replay`, with a fallback to the existing
-`logs/fastdem/build/fastdem_replay`; override with `--fastdem PATH`.
+`--ros` implies `--depth-maps` and requires the robot backend. The launcher checks
+the scratchpad builds and then `$KAIVURI_REPO/native_stack/tools/heightmap_bench/fastdem_replay`.
+Use `--fastdem PATH` to select another executable.
 The launcher enables `isaacsim.ros2.bridge` before importing `rclpy`.
 
 `--mode replay` loops the bundled pose sequence using its relative timestamps; omit it
@@ -56,13 +71,14 @@ On the RViz machine, keep another checkout including `assets/urdf/meshes`. Sourc
 machine's ROS environment, then run from the scratchpad checkout:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source /opt/ros/lyrical/setup.bash  # use your system ROS distribution here
 export ROS_DOMAIN_ID=42
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTDDS_BUILTIN_TRANSPORTS=LARGE_DATA
 ros2 launch ./ros2/view_latest.launch.py
 ```
 
+For a same-machine session, you can set `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` in both terminals.
 Install your distro's `rviz2`, `tf2_ros`, ROS Python messages, and Python NumPy packages if
 missing. Network discovery, firewall and matching DDS settings must be checked on Ubuntu.
 The description publisher runs beside RViz so mesh URIs refer to that machine's checkout.
@@ -115,10 +131,25 @@ These differ from the older `upper_carriage`-relative height convention.
 
 Sensor/map publishers use reliable, keep-last depth 1. Metadata and events are
 transient-local. RViz requests best effort and depth 1, compatible with these publishers.
-The cloud defaults to 2 Hz in data time and is built only when subscribed; use
-`--ros-cloud-hz 0` for image-only operation. There is no `grid_map_msgs/GridMap` publisher:
-numeric height/age images plus metadata expose the grid without custom-message builds
-inside Isaac. Standard RViz uses the PointCloud2 representation.
+
+**Green terrain boxes.** RViz draws one XYZ point per known cell in the fused surround
+heightmap. The cloud uses the same acquisition stamp as the map and updates on each
+completed map (5 Hz in the live profile). Both raw camera depth streams are optional.
+
+Uncheck **Displays → FastDEM accumulated terrain** on a remote RViz to stop its cloud
+subscription. Other viewers can keep theirs. When the last subscriber disconnects,
+Isaac skips building and publishing the cloud. To mute it for *all* subscribers at
+runtime, use the following command. Set the parameter to `true` to resume on the next map.
+
+```bash
+ros2 param set /isaac_terrain publish_map_cloud false
+```
+
+For a launch that never offers this topic, pass `--ros-cloud-hz 0`. An explicit positive
+cap samples completed maps in data time. Omit `--ros-depth` to keep raw camera depth
+local. When enabled, each raw depth image is converted and sent only while its own
+topic has a subscriber. Numeric height and age images plus metadata expose the grid
+through standard ROS messages.
 
 ## Multiple time references, one ROS clock
 
@@ -129,7 +160,8 @@ inside Isaac. Standard RViz uses the PointCloud2 representation.
   does not slow recorded motion in a converted dataset. Both synthetic cameras observe
   the same applied pose; the source reference identifies that selected replay exposure,
   not two independently replayed real camera exposures.
-* Without replay, advance by `1 / map_hz` per captured observation. For live manual scene
+* Gamepad mode uses wall time so hydraulic motion and camera exposures follow the host clock.
+* For a stationary scene, advance by `1 / map_hz` per captured observation. For live manual scene
   movement choose `--ros-time wall` to retain actual elapsed host acquisition intervals.
 
 `--ros-time fixed` explicitly selects fixed/replay stepping. `wall` retains wall-paced
@@ -168,7 +200,11 @@ and use one clock owner. If `ros2 bag play --clock` generates `/clock`, exclude 
 ## Optional sensor streams
 
 `--ros-cameras` publishes `/excavator/cameras/<name>/{image_raw,camera_info}`. Images are
-calibrated `mono8` at map capture cadence, not an independent 30 Hz. The arm retains
+calibrated `mono8`. Wall-clock demos use the IR cadence. Fixed/source-time exports pair every IR capture with a map. ROS replay defaults to 640×480 IR and gamepad mode defaults to 224×168. Use
+`--ir-width 224` to match the 224×168 demo and its scaled camera intrinsics.
+The bundled calibration supports 640×480, 320×240 or 160×120 depth with
+`--depth-divisor 1`, `2` or `4`. Requested raw depth defaults to native resolution.
+Depth and its CameraInfo use the actual map exposure stamp and intrinsics. The arm retains
 recorder orientation and fitted appearance; its optical TF, principal point and
 tangential coefficients match that rotation. IR2 and depth have separate frames,
 preserving the arm stereo baseline. Add camera topics explicitly when recording them.
@@ -176,10 +212,10 @@ preserving the arm stereo baseline. Add camera topics explicitly when recording 
 `--ros-depth` publishes `/excavator/cameras/<name>/depth/{image_raw,camera_info}`.
 Depth is converted from recorder 0.1 mm Z16 into ROS `16UC1` millimetres and unrotated
 to match the physical `<name>_camera` optical frame. Zero is invalid. Ideal rendered
-depth has no empirical real-camera correction. The default RViz profile has no depth
-or raw point-cloud subscriptions; camera displays start disabled.
+depth has no empirical real-camera correction. RViz enables both IR displays and
+shows frames when the simulator publishes them.
 
-## Validation and remaining Ubuntu work
+## Validation
 
 CPU contract tests require no ROS installation or Kit renderer:
 
@@ -201,7 +237,8 @@ registration in RViz and increasing acquisition stamps across replay loops. Meas
 wall throughput separately from simulation-time topic rates. Depth rendering and
 local mapping still consume GPU/CPU time.
 
-The adapter reads **paused USD and kinematic replay**. Playing the physics timeline
+The adapter reads the paused USD poses authored by replay or Kit gamepad control. Playing the physics timeline
 is rejected because live PhysX/Fabric pose synchronization has not been integrated.
-ROS valve commands, action recording and dynamics remain integration work.
-Live ROS/DDS/RViz behavior still needs validation on the Ubuntu machine.
+ROS valve commands and action recording remain integration work.
+On Ubuntu 26.04, the bundled Jazzy bridge and the system Lyrical RViz were
+verified together with both IR images, calibration, maps, and TF at matching capture stamps.

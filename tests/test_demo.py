@@ -15,6 +15,22 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = Path(os.environ.get("KAIVURI_REPO", Path.home() / "Documents/GitHub/kaivuriprokkis"))
 
 
+def test_gamepad_renderer_requests_synchronous_camera_readback(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from launch_3dgs import create_app
+
+    monkeypatch.setitem(sys.modules, "isaacsim", SimpleNamespace(SimulationApp=dict))
+    sync_args = set(create_app(True, synchronized_cameras=True)["extra_args"])
+    default_args = set(create_app(True)["extra_args"])
+    assert sync_args - default_args == {
+        "--/rtx/hydra/supportMultiTickRate=false",
+        "--/app/hydraEngine/waitIdle=true",
+        "--/app/updateOrder/checkForHydraRenderComplete=1000",
+    }
+
+
 def test_demo_and_static_viewer_default_to_bundled_configuration(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     for options in (["--mode", "replay"], ["--depth-maps"], ["--ros", "--mode", "replay"]):
@@ -35,6 +51,16 @@ def test_demo_and_static_viewer_default_to_bundled_configuration(monkeypatch, tm
         parse_arguments(["--config", "profile", "--dataset", "recording"])
     with pytest.raises(SystemExit):
         parse_arguments(["--mode", "gamepad", "--replay", "motion.json"])
+
+
+def test_headless_ros_replay_can_stream_continuously_or_for_a_frame_budget():
+    options = ["--headless", "--ros", "--ros-cameras", "--mode", "replay"]
+    live = parse_arguments(options)
+    assert live.frames == 0 and live.ir_width == 640 and live.depth_maps and not live.uncapped
+    bench = parse_arguments([*options, "--frames", "440", "--ir-width", "224", "--uncapped"])
+    assert bench.frames == 440 and bench.ir_width == 224 and bench.uncapped
+    with pytest.raises(SystemExit):
+        parse_arguments([*options, "--frames", "-1"])
 
 
 def test_explicit_dataset_session_remains_supported_without_falling_back(tmp_path):
@@ -136,3 +162,28 @@ def test_simulator_uses_local_filter_overrides_and_tool_geometry(tmp_path):
     # A supplied simulator tip must not consult the external controller config.
     pose = UsdRobotPose(None, tmp_path / "missing-robot", -0.0245, tip=policy.tool_tip)
     np.testing.assert_array_equal(pose.tip, meta["tool_tip_m"])
+
+
+@pytest.mark.parametrize("divisor", [2, 4])
+def test_reduced_depth_uses_the_same_optical_rays_and_grid_density(divisor):
+    from heightmap_config import reduced_depth_sensor
+
+    for original in load_profile()["sensors"].values():
+        low = reduced_depth_sensor(original, divisor)
+        a, b = original["depth_intrinsics"], low["depth_intrinsics"]
+        assert (b["width"], b["height"]) == (640 // divisor, 480 // divisor)
+        assert low["rotation_deg"] == original["rotation_deg"]
+        assert low["depth_scale_m"] == original["depth_scale_m"]
+        assert low["ir_intrinsics"] == original["ir_intrinsics"]
+        for u, v in ((0, 0), (b["width"] - 1, b["height"] - 1), (70, 25)):
+            for pixel, pp, focal in ((u, "ppx", "fx"), (v, "ppy", "fy")):
+                native = (pixel + 0.5) * divisor - 0.5
+                assert (pixel - b[pp]) / b[focal] == pytest.approx((native - a[pp]) / a[focal])
+    assert parse_arguments(["--mode", "gamepad", "--depth-divisor", "1"]).depth_divisor == 1
+    assert parse_arguments(["--ros", "--ros-cameras", "--ros-depth", "--ros-time", "wall"]).depth_divisor == 1
+    if REPO.exists():
+        from robot_mapping import RobotPolicy
+
+        policy = RobotPolicy(REPO, depth_divisor=divisor)
+        for rays in policy.projector.rays.values():
+            assert rays.x[:: policy.projector.stride, :: policy.projector.stride].shape == (120, 160)

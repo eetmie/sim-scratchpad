@@ -13,11 +13,12 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
-from heightmap_config import STREAMS, configuration_files
+from heightmap_config import STREAMS, configuration_files, reduced_depth_sensor
 from threadpoolctl import ThreadpoolController
 
 ROOT = Path(__file__).resolve().parent
@@ -42,29 +43,32 @@ def mapping_arguments(parser):
         help="kaivuriprokkis checkout; defaults to KAIVURI_REPO or ~/Documents/GitHub/kaivuriprokkis",
     )
     parser.add_argument(
-        "--fastdem", type=Path, help="Compiled robot FastDEM adapter; defaults to the local portable build"
+        "--fastdem", type=Path, help="FastDEM executable (default: scratchpad build, then the robot checkout)"
     )
 
 
 def robot_checkout(path=None):
     repo = Path(path or os.environ.get("KAIVURI_REPO", Path.home() / "Documents/GitHub/kaivuriprokkis")).resolve()
     if not (repo / "native_stack/tools/heightmap_bench/mapper.py").is_file():
-        raise FileNotFoundError(f"Robot mapper not found in {repo}; pass --robot-repo PATH")
+        raise FileNotFoundError(f"Robot mapper not found in {repo}. Set KAIVURI_REPO or pass --robot-repo PATH")
     return repo
 
 
-def fastdem_binary(path=None):
+def fastdem_binary(path=None, *, repo=None):
     executable = "fastdem_replay.exe" if os.name == "nt" else "fastdem_replay"
     build = "build-mingw" if os.name == "nt" else "build"
-    result = Path(path) if path else ROOT / ".cache/fastdem" / build / executable
-    # Keep existing builds usable: CMake caches contain absolute source paths.
-    if path is None and not result.is_file():
-        legacy = ROOT / "logs/fastdem" / build / executable
-        if legacy.is_file():
-            result = legacy
-    if not result.is_file():
-        raise FileNotFoundError(f"FastDEM not found: {result}. Build it with build_fastdem.py or pass --fastdem PATH")
-    return result.resolve()
+    if path is not None:
+        candidates = [Path(path)]
+    else:
+        candidates = [ROOT / directory / build / executable for directory in (".cache/fastdem", "logs/fastdem")]
+        repo = repo or os.environ.get("KAIVURI_REPO")
+        if repo:
+            candidates.append(Path(repo) / "native_stack/tools/heightmap_bench" / executable)
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    searched = ", ".join(map(str, candidates))
+    raise FileNotFoundError(f"FastDEM not found: {searched}. Build it with build_fastdem.py or pass --fastdem PATH")
 
 
 @functools.lru_cache(maxsize=4)
@@ -86,7 +90,9 @@ def millimetres(height):
 
 
 class RobotPolicy:
-    def __init__(self, repo, dataset=None, session=0, *, config=None, empirical_correction=False, overrides=None):
+    def __init__(
+        self, repo, dataset=None, session=0, *, config=None, empirical_correction=False, overrides=None, depth_divisor=1
+    ):
         metadata, files = configuration_files(dataset, session, config=config)
         self.metadata = json.loads(metadata.read_text(encoding="utf-8"))
         self.repo = robot_checkout(repo)
@@ -120,7 +126,18 @@ class RobotPolicy:
         self.calibration = copy.deepcopy(self.metadata["calibration"])
         if not empirical_correction:
             self.calibration["depth_correction"] = {}
-        self.projector = self.mapper.DepthProjector(self.calibration, files, self.projection)
+        if depth_divisor == 1:
+            self.projector = self.mapper.DepthProjector(self.calibration, files, self.projection)
+        else:
+            self.projection.stride = max(1, round(self.projection.stride / depth_divisor))
+            # The robot projector builds rays from calibration files at construction.
+            with tempfile.TemporaryDirectory() as directory:
+                scaled = {}
+                for key, original in files.items():
+                    sensor = reduced_depth_sensor(json.loads(original.read_text()), depth_divisor)
+                    scaled[key] = Path(directory) / f"{key}.depth.json"
+                    scaled[key].write_text(json.dumps(sensor))
+                self.projector = self.mapper.DepthProjector(self.calibration, scaled, self.projection)
         self.revision = subprocess.check_output(["git", "-C", str(self.repo), "rev-parse", "HEAD"], text=True).strip()
 
     def provenance(self):
@@ -172,7 +189,7 @@ class RobotPolicy:
             )
 
     def engine(self, path=None):
-        return self.mapper.FastDEM(fastdem_binary(path), self.config)
+        return self.mapper.FastDEM(fastdem_binary(path, repo=self.repo), self.config)
 
 
 class UsdRobotPose:

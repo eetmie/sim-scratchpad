@@ -30,14 +30,16 @@ def load_replay(path):
 
 def apply_transforms(stage, transforms, ops):
     """Apply a pose on the caller's edit layer, reusing USD transform operations."""
-    from pxr import Gf, UsdGeom
+    from pxr import Gf, Sdf, UsdGeom
 
-    for path, matrix in transforms.items():
-        if path not in ops:
-            xform = UsdGeom.Xformable(stage.GetPrimAtPath(path))
-            if not xform:
-                raise ValueError(f"Replay target does not exist: {path}")
-            op = xform.AddTransformOp(opSuffix="recordedReplay")
-            xform.SetXformOpOrder([op], xform.GetResetXformStack())
-            ops[path] = op
-        ops[path].Set(Gf.Matrix4d(*np.asarray(matrix).ravel()))
+    for path in transforms.keys() - ops.keys():
+        xform = UsdGeom.Xformable(stage.GetPrimAtPath(path))
+        if not xform:
+            raise ValueError(f"Replay target does not exist: {path}")
+        op = xform.AddTransformOp(opSuffix="recordedReplay")
+        xform.SetXformOpOrder([op], xform.GetResetXformStack())
+        ops[path] = op
+    # Notify the renderer once for the entire robot pose.
+    with Sdf.ChangeBlock():
+        for path, matrix in transforms.items():
+            ops[path].Set(Gf.Matrix4d(*np.asarray(matrix).ravel()))

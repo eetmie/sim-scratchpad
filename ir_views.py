@@ -52,10 +52,7 @@ class IRViews:
             if rgba.shape != (intr["height"], intr["width"], 4):
                 return False
             # A camera can legitimately face a uniform surface during teleoperation.
-            if rgba[..., :3].min() == rgba[..., :3].max():
-                images[name] = np.full(rgba.shape[:2], rgba[0, 0, 0], dtype=np.uint8)
-            else:
-                images[name] = ir_image(rgba, info)
+            images[name] = ir_image(rgba, info, allow_flat=True)
         self.images = images
         return True
 

@@ -6,7 +6,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Fixed Frame: world
-    Frame Rate: 20
+    Frame Rate: 30
   Displays:
     - Class: rviz_default_plugins/Grid
       Name: Grid
@@ -51,15 +51,15 @@ Visualization Manager:
         Reliability Policy: Best Effort
         Depth: 1
     - Class: rviz_default_plugins/Image
-      Name: Cabin grayscale (opt-in stream)
-      Enabled: false
+      Name: Cabin IR
+      Enabled: true
       Topic:
         Value: /excavator/cameras/cabin/image_raw
         Reliability Policy: Best Effort
         Depth: 1
     - Class: rviz_default_plugins/Image
-      Name: Arm grayscale (opt-in stream)
-      Enabled: false
+      Name: Boom IR
+      Enabled: true
       Topic:
         Value: /excavator/cameras/arm/image_raw
         Reliability Policy: Best Effort

@@ -1,7 +1,56 @@
 """Recorded D435i and terrain-image frame/unit contracts, independent of Kit."""
 
+from unittest.mock import Mock
+
 import numpy as np
-from depth_mapping import UNKNOWN_AGE, UNKNOWN_MM, TerrainMapper, deproject, level_points, map_image, optical_pose
+import pytest
+from depth_mapping import (
+    UNKNOWN_AGE,
+    UNKNOWN_MM,
+    DepthMapping,
+    TerrainMapper,
+    deproject,
+    level_points,
+    map_image,
+    optical_pose,
+    recorded_depth,
+)
+
+
+@pytest.mark.parametrize("cuda", [False, True])
+def test_panel_upload_preserves_pixels_and_size_after_resize(cuda):
+    panel = DepthMapping.__new__(DepthMapping)
+    panel.panel_device = None
+    if cuda:
+        wp = pytest.importorskip("warp")
+        if not wp.is_cuda_available():
+            pytest.skip("CUDA device required for GPU panel upload")
+        panel.panel_device = wp.get_device("cuda:0")
+    provider = Mock()
+    panel.providers, panel.image_buffers = {"arm": provider}, {}
+    gray = np.arange(15, dtype=np.uint8).reshape(3, 5)
+    for rgb in (False, True):
+        image = np.stack((gray, gray + 10, gray + 20), axis=-1)[::2, ::2] if rgb else gray
+        panel._image("arm", image)
+        buffer = panel.image_buffers["arm"]
+        size = [image.shape[1], image.shape[0]]
+        if cuda:
+            provider.set_bytes_data_from_gpu.assert_called_with(buffer.ptr, size)
+            rgba = buffer.numpy()
+        else:
+            data, actual_size = provider.set_data_array.call_args.args
+            assert actual_size == size
+            rgba = data.reshape(*image.shape[:2], 4)
+        np.testing.assert_array_equal(rgba[..., :3], image if rgb else np.repeat(gray[..., None], 3, axis=-1))
+        assert np.all(rgba[..., 3] == 255)
+
+
+def test_depth_quantization_owns_rotated_pixels_and_preserves_invalid_and_saturation_rules():
+    samples = np.array([[np.nan, np.inf, -1, 0], [2.5, 3.5, 65535.75, 65536]], dtype=np.float32)
+    samples.setflags(write=False)
+    z16 = recorded_depth(samples, {"depth_scale_m": 1.0, "rotation_deg": 180})
+    assert z16.dtype == np.uint16 and z16.flags.c_contiguous
+    np.testing.assert_array_equal(z16, [[0, 65535, 4, 2], [0, 0, 0, 0]])
 
 
 def test_depth_to_ir_baseline_is_rotated_into_parent_frame():
