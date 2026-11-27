@@ -32,7 +32,8 @@ bash ros2/run_latest.sh --dataset "$KAIVURI_DATASET" --robot-repo "$KAIVURI_REPO
 
 `run_latest.sh` selects Isaac's bundled Jazzy and Fast DDS using the existing `ros_env.sh`.
 `--ros` implies `--depth-maps` and requires the robot backend. Its default Linux adapter
-path is `logs/fastdem/build/fastdem_replay`; override with `--fastdem PATH`.
+path is `.cache/fastdem/build/fastdem_replay`, with a fallback to the existing
+`logs/fastdem/build/fastdem_replay`; override with `--fastdem PATH`.
 The launcher enables `isaacsim.ros2.bridge` before importing `rclpy`.
 
 To replay a saved plan while preserving exposure timing, add
@@ -47,7 +48,7 @@ bash ros2/run_latest.sh --dataset "$KAIVURI_DATASET" --robot-repo "$KAIVURI_REPO
   --replay logs/ros-replay/episode-002.json --ros-cameras
 ```
 
-On the RViz machine, keep another checkout including `ros2/urdf/meshes`. Source that
+On the RViz machine, keep another checkout including `assets/urdf/meshes`. Source that
 machine's ROS environment, then run from the scratchpad checkout:
 
 ```bash
@@ -179,7 +180,7 @@ or raw point-cloud subscriptions; camera displays start disabled.
 CPU contract tests require no ROS installation or Kit renderer:
 
 ```bash
-uv run --no-sync python -m pytest -q --noconftest test_ros_viewer.py test_depth_mapping.py
+uv run --no-sync python -m pytest -q --noconftest tests/test_ros_viewer.py tests/test_depth_mapping.py
 ```
 
 On Ubuntu, verify bridge startup and then:

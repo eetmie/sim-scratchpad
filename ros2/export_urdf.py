@@ -2,7 +2,7 @@
 
     uv run --extra isaacsim python scripts/sim-scratchpad/ros2/export_urdf.py
 
-Writes ros2/urdf/excavator.urdf (mesh paths are absolute file:// URIs, so no ROS package is needed).
+Writes assets/urdf/excavator.urdf with relative mesh paths; ROS loaders resolve local file URIs.
 Joint origins and axes come from the USD joint frames, so URDF joint angles equal the sim's /joint_states.
 A fixed "world" root link sits at the excavator's stage pose, so RViz's fixed frame "world" matches the sim.
 """
@@ -27,7 +27,7 @@ from pxr import Sdf, Usd, UsdGeom, UsdPhysics  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 USD = os.path.join(HERE, "..", "demo_env.usd")
-OUT_DIR = os.path.join(HERE, "urdf")
+OUT_DIR = os.path.abspath(os.path.join(HERE, "..", "assets", "urdf"))
 URDF = os.path.join(OUT_DIR, "excavator.urdf")
 ROBOT = "/World/excavator_bucket"
 ROOT_LINK = "lower_carriage"
@@ -54,7 +54,7 @@ converter = UsdToUrdfConverter(
     stage=stage,
     root_prim_path=ROBOT,
     mesh_dir_name="meshes",
-    mesh_path_prefix=f"file://{OUT_DIR}/meshes/",
+    mesh_path_prefix="meshes/",
 )
 converter.convert(URDF)
 # Some exported OBJs name an .mtl the exporter never writes; RViz then refuses the mesh.

@@ -69,7 +69,7 @@ def arm_points(urdf_path, angles):
     for link in root.findall("link"):
         name, vis = link.get("name"), link.find("visual")
         if name in ("lift_boom", "tilt_boom", "tool_body", "bucket"):
-            mesh = os.path.join(HERE, "urdf", "meshes", os.path.basename(vis.find("geometry/mesh").get("filename")))
+            mesh = os.path.join(os.path.dirname(urdf_path), vis.find("geometry/mesh").get("filename"))
             V, F = arm_grid._load_obj(mesh)
             M = pose[name] @ arm_grid._origin(vis)
             out.append(arm_grid._surface(V, F, spacing=0.001) @ M[:3, :3].T + M[:3, 3])
@@ -103,7 +103,7 @@ def unproject_px(cloud, fx, fy):
 
 
 def main():
-    urdf_path = os.path.join(HERE, "urdf", "excavator.urdf")
+    urdf_path = os.path.join(HERE, "..", "assets", "urdf", "excavator.urdf")
     cam = next(c for c in sensors.DEPTH_CAMERAS if c[0] == "cabin")
     params = mapping_launch.depth_to_cloud_params("")
     params.update(cameras=["cabin"], stride=2, max_rate_hz=100.0)

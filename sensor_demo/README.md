@@ -194,7 +194,7 @@ This is the useful lidar “cheat”: keep geometry, range, view direction and o
 reflectance, multiple returns, scan motion distortion and sensor noise. The oracle is a separate, stronger cheat.
 Surfaces outside the 2.4 m soil grid are currently absent from sensor queries except the robot/support block.
 The standard 0.8 m lidar working volume fits the sandbox; the long-range depth views can therefore show missing
-background. Updating the excavator asset requires refreshing the corresponding `ros2/urdf` export too.
+background. Updating the excavator asset requires refreshing the corresponding `assets/urdf` export too.
 
 ## Recording and testing
 
@@ -229,7 +229,7 @@ simulation has no extra depth-camera work until `--depth_cameras` is supplied. A
 processes when measuring performance.
 
 The source terrain/particle implementation and its tuning are described in [SOIL_MODEL.md](SOIL_MODEL.md).
-The sensor demo shares input/render helpers with `../newton` and robot meshes with `../ros2/urdf`; neither
+The sensor demo shares input/render helpers with `../newton` and robot meshes with `../assets/urdf`; neither
 requires importing ROS. The robot asset remains at `assets/excavator_bucket.usd`
 relative to sim-scratchpad. [RGB_PLAN.md](RGB_PLAN.md) records how the RGB cameras were built and what is left.
 

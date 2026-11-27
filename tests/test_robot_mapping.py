@@ -6,15 +6,16 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from robot_mapping import ROOT, STREAMS, RobotPolicy, UsdRobotPose
 
 DATASET = Path(os.environ.get("KAIVURI_DATASET", Path.home() / "Desktop/heightmap_tests_complete"))
 REPO = Path(os.environ.get("KAIVURI_REPO", Path.home() / "Documents/GitHub/kaivuriprokkis"))
 REPLAY = ROOT / "logs/depth_replay/episode-002"
 pytestmark = pytest.mark.skipif(
-    not (REPLAY / "replay.json").is_file() or not REPO.is_dir(),
-    reason="Local robot checkout and saved calibration replay required",
+    not (REPLAY / "replay.json").is_file()
+    or not (DATASET / "native/episode-000002/samples.jsonl").is_file()
+    or not (REPO / "native_stack/tools/heightmap_bench/mapper.py").is_file(),
+    reason="Local dataset, robot checkout and saved calibration replay required",
 )
 
 
@@ -29,9 +30,9 @@ def recorded_state(policy, stamp):
 
 
 def test_live_usd_pivots_and_tip_match_recorded_fk_after_replay():
-    from pxr import Usd
-
     from camera_calibration.recorded_poses import apply_transforms
+
+    from pxr import Usd
 
     policy = RobotPolicy(REPO, DATASET)
     frame = json.loads((REPLAY / "replay.json").read_text())["views"]["cabin"][55]

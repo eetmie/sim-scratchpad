@@ -124,7 +124,7 @@ do not add soil dynamics or replay recorded depth as simulated measurements.
 Focused CPU validation:
 
 ```powershell
-uv run --no-sync python -m pytest -q --noconftest test_depth_mapping.py
+uv run --no-sync python -m pytest -q --noconftest tests/test_depth_mapping.py
 ```
 
 ## Replay logged motion and compare recorded depth
@@ -226,16 +226,20 @@ installation or WSL is required:
 
 ```powershell
 uv run --no-sync --with cmake --with ninja python build_fastdem.py --llvm-mingw --robot-repo C:/Users/sh23937/Documents/GitHub/kaivuriprokkis
-uv run --no-sync --with av python offline_robot_maps.py --robot-repo C:/Users/sh23937/Documents/GitHub/kaivuriprokkis --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete --replay logs/depth_replay/episode-002 --out logs/depth_replay/episode-002/robot-main-fastdem --fastdem logs/fastdem/build-mingw/fastdem_replay.exe --video
+uv run --no-sync --with av python offline_robot_maps.py --robot-repo C:/Users/sh23937/Documents/GitHub/kaivuriprokkis --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete --replay logs/depth_replay/episode-002 --out logs/depth_replay/episode-002/robot-main-fastdem --fastdem .cache/fastdem/build-mingw/fastdem_replay.exe --video
 ```
 
 `build_fastdem.py` keeps the compiler, third-party source and licenses under
-`logs/fastdem`. It verifies the compiler archive against the published SHA-256,
+`.cache/fastdem`. It verifies the compiler archive against the published SHA-256,
 pins FastDEM at `5cd3e25` and nanoGrid at `058a6a6`, applies the robot's core patch,
 and builds the robot's C++ adapter with Windows binary stdin/stdout. The build
 manifest records source hashes and tool versions. The compiler also remains
-available at `logs/fastdem/llvm-mingw-20261117-ucrt-x86_64/bin/`; this does not
+available at `.cache/fastdem/llvm-mingw-20261117-ucrt-x86_64/bin/`; this does not
 replace a future MSVC/Windows SDK installation for CUDA or MSVC builds.
+
+Existing `logs/fastdem/` builds remain supported by the viewer's automatic
+discovery. For an older build, use that path in the explicit `--fastdem` argument
+above. Leave its CMake tree in place because the cache stores absolute paths.
 
 The filtered comparison includes `surround_real_mm`, `surround_sim_mm` and their
 uint16 `surround_*_age` grids in every per-frame NPZ. Ages count accepted paired
@@ -256,7 +260,7 @@ that is applied when making the real map.
 Focused checks, including a round trip through the compiled C++ adapter:
 
 ```powershell
-uv run --no-sync python -m pytest -q --noconftest test_fastdem.py test_replay_depth.py test_depth_mapping.py camera_calibration/test_calibration.py
+uv run --no-sync python -m pytest -q --noconftest tests/test_fastdem.py tests/test_replay_depth.py tests/test_depth_mapping.py camera_calibration/test_calibration.py
 uv run --no-sync python ros2/arm_grid.py
 ```
 

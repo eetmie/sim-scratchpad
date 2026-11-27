@@ -1,19 +1,18 @@
 """Load the exported robot description and derive self-filter boxes from its meshes."""
 
-import os
-import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 import numpy as np
 
 
 def read_urdf(ros2_dir):
-    """urdf/excavator.urdf with its mesh paths pointed at this checkout.
-
-    The exporter writes absolute mesh paths of the machine it ran on; the robot and other machines have their own.
-    """
-    with open(os.path.join(ros2_dir, "urdf", "excavator.urdf")) as f:
-        return re.sub(r"file://[^\"]*/urdf/meshes/", f"file://{ros2_dir}/urdf/meshes/", f.read())
+    """Load assets/urdf with local file URIs for ROS, given this checkout's ros2 directory."""
+    directory = Path(ros2_dir).resolve().parent / "assets/urdf"
+    text = (directory / "excavator.urdf").read_text(encoding="utf-8")
+    return text.replace('filename="meshes/', f'filename="{(directory / "meshes").as_uri()}/')
 
 
 def rpy_matrix(r, p, y):
@@ -46,7 +45,7 @@ def link_boxes(urdf_xml):
             mesh = visual.find("geometry/mesh")
             if mesh is None:
                 continue
-            path = mesh.get("filename").removeprefix("file://")
+            path = url2pathname(urlparse(mesh.get("filename")).path)
             with open(path) as f:
                 v = np.array([line.split()[1:4] for line in f if line.startswith("v ")], dtype=float)
             origin = visual.find("origin")

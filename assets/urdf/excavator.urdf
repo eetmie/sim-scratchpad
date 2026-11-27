@@ -14,13 +14,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh.obj" />
+        <mesh filename="meshes/Mesh.obj" />
       </geometry>
       <origin xyz="-1.3416743e-10 -1.36495368e-11 3.00246356e-11" rpy="2.52539498e-10 -2.23827179e-10 -1.38038848e-09" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_1.obj" />
+        <mesh filename="meshes/Mesh_1.obj" />
       </geometry>
       <origin xyz="-1.3416743e-10 -1.36495368e-11 3.00246356e-11" rpy="2.52539498e-10 -2.23827179e-10 -1.38038848e-09" />
     </collision>
@@ -33,13 +33,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_2.obj" />
+        <mesh filename="meshes/Mesh_2.obj" />
       </geometry>
       <origin xyz="7.43387258e-09 -1.23869916e-09 1.42557127e-08" rpy="1.16728021e-09 1.97707539e-09 1.26425587e-09" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_3.obj" />
+        <mesh filename="meshes/Mesh_3.obj" />
       </geometry>
       <origin xyz="7.43387258e-09 -1.23869916e-09 1.42557127e-08" rpy="1.16728021e-09 1.97707539e-09 1.26425587e-09" />
     </collision>
@@ -52,13 +52,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_4.obj" />
+        <mesh filename="meshes/Mesh_4.obj" />
       </geometry>
       <origin xyz="6.10918277e-08 -2.1589419e-08 -4.05320736e-08" rpy="2.62739855e-07 1.00496056 2.12472773e-07" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_5.obj" />
+        <mesh filename="meshes/Mesh_5.obj" />
       </geometry>
       <origin xyz="6.10918277e-08 -2.1589419e-08 -4.05320736e-08" rpy="2.62739855e-07 1.00496056 2.12472773e-07" />
     </collision>
@@ -71,13 +71,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_6.obj" />
+        <mesh filename="meshes/Mesh_6.obj" />
       </geometry>
       <origin xyz="9.53558736e-08 -2.66804992e-08 -2.58573682e-08" rpy="-3.14159262 -1.43151972 3.14159255" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_7.obj" />
+        <mesh filename="meshes/Mesh_7.obj" />
       </geometry>
       <origin xyz="9.53558736e-08 -2.66804992e-08 -2.58573682e-08" rpy="-3.14159262 -1.43151972 3.14159255" />
     </collision>
@@ -90,13 +90,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_8.obj" />
+        <mesh filename="meshes/Mesh_8.obj" />
       </geometry>
       <origin xyz="7.47656789e-08 1.83933941e-09 1.33092306e-07" rpy="3.94782934e-07 0.753980772 7.0382105e-08" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_9.obj" />
+        <mesh filename="meshes/Mesh_9.obj" />
       </geometry>
       <origin xyz="7.47656789e-08 1.83933941e-09 1.33092306e-07" rpy="3.94782934e-07 0.753980772 7.0382105e-08" />
     </collision>
@@ -109,13 +109,13 @@
     </inertial>
     <visual name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_10.obj" />
+        <mesh filename="meshes/Mesh_10.obj" />
       </geometry>
       <origin xyz="1.06665941e-08 0.0378226592 0.0334291546" rpy="-2.67106557e-07 0.335104083 -1.57079625" />
     </visual>
     <collision name="Mesh">
       <geometry>
-        <mesh filename="file:///home/joel/IsaacLab/scripts/sim-scratchpad/ros2/urdf/meshes/Mesh_11.obj" />
+        <mesh filename="meshes/Mesh_11.obj" />
       </geometry>
       <origin xyz="1.07987828e-08 0.0378226593 0.0334291545" rpy="-2.67299811e-07 0.335104081 -1.57079625" />
     </collision>

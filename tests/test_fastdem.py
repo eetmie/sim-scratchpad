@@ -3,18 +3,38 @@
 import io
 import os
 import subprocess
-from pathlib import Path
 
 import numpy as np
 import pytest
-
 from offline_robot_maps import ScanArchive
+from robot_mapping import ROOT, fastdem_binary
 
-ROOT = Path(__file__).resolve().parent
-EXE = Path(os.environ.get("FASTDEM_EXE", ROOT / "logs/fastdem/build-mingw/fastdem_replay.exe"))
+try:
+    EXE = fastdem_binary(os.environ.get("FASTDEM_EXE"))
+except FileNotFoundError:
+    EXE = None
 
 
-@pytest.mark.skipif(not EXE.is_file(), reason="Build the pinned FastDEM adapter first")
+def test_adapter_discovery_prefers_cache_and_preserves_existing_builds(tmp_path, monkeypatch):
+    import robot_mapping
+
+    monkeypatch.setattr(robot_mapping, "ROOT", tmp_path)
+    relative = "build-mingw/fastdem_replay.exe" if os.name == "nt" else "build/fastdem_replay"
+    legacy = tmp_path / "logs/fastdem" / relative
+    cached = tmp_path / ".cache/fastdem" / relative
+    legacy.parent.mkdir(parents=True)
+    legacy.touch()
+    assert fastdem_binary() == legacy.resolve()
+    cached.parent.mkdir(parents=True)
+    cached.touch()
+    assert fastdem_binary() == cached.resolve()
+    assert fastdem_binary(legacy) == legacy.resolve()
+    # An explicit typo must fail instead of silently selecting a different binary.
+    with pytest.raises(FileNotFoundError, match="FastDEM not found"):
+        fastdem_binary(tmp_path / "missing")
+
+
+@pytest.mark.skipif(EXE is None, reason="Build the pinned FastDEM adapter first")
 def test_flat_ground_binary_round_trip_and_persistent_age():
     # Optical +Z points down; the sensor is half a metre above a flat surface.
     x, y = np.meshgrid(np.arange(0.205, 0.606, 0.01), np.arange(-0.195, 0.196, 0.01))

@@ -55,7 +55,12 @@ def robot_checkout(path=None):
 def fastdem_binary(path=None):
     executable = "fastdem_replay.exe" if os.name == "nt" else "fastdem_replay"
     build = "build-mingw" if os.name == "nt" else "build"
-    result = Path(path) if path else ROOT / "logs/fastdem" / build / executable
+    result = Path(path) if path else ROOT / ".cache/fastdem" / build / executable
+    # Keep existing builds usable: CMake caches contain absolute source paths.
+    if path is None and not result.is_file():
+        legacy = ROOT / "logs/fastdem" / build / executable
+        if legacy.is_file():
+            result = legacy
     if not result.is_file():
         raise FileNotFoundError(f"FastDEM not found: {result}. Build it with build_fastdem.py or pass --fastdem PATH")
     return result.resolve()

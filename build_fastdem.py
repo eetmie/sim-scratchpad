@@ -1,7 +1,7 @@
 """Build the robot's pinned FastDEM adapter locally, with a portable Windows compiler.
 
 uv run --no-sync --with cmake --with ninja python build_fastdem.py --llvm-mingw --robot-repo PATH
-All downloaded source, licenses and build products stay under logs/fastdem.
+All downloaded source, licenses and build products stay under .cache/fastdem.
 """
 
 import argparse
@@ -159,7 +159,7 @@ endif()
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--robot-repo", type=Path, required=True)
-    parser.add_argument("--work", type=Path, default=Path("logs/fastdem"))
+    parser.add_argument("--work", type=Path, default=Path(__file__).resolve().parent / ".cache/fastdem")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument(
         "--llvm-mingw", action="store_true", help="Download a portable Windows C++ toolchain; no admin required"

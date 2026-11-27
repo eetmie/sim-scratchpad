@@ -4,11 +4,10 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import pytest
-from scipy.spatial.transform import Rotation
-
 from depth_mapping import level_points, level_pose
 from ros2.map_contract import FrameClock, depth_millimetres, grid_points, height_image, height_metres, image_calibration
 from ros2.viewer_scene import joint_positions
+from scipy.spatial.transform import Rotation
 
 
 def test_map_payloads_keep_unknown_cells_and_ground_reference():
@@ -105,11 +104,11 @@ def test_fastdem_default_follows_the_native_build_directory(tmp_path, monkeypatc
 def test_usd_snapshot_has_one_tf_parent_per_link_and_reconstructs_live_poses():
     from pathlib import Path
 
-    from pxr import Usd, UsdGeom
-
     from ros2.viewer_scene import ViewerScene
 
-    stage = Usd.Stage.Open(str(Path(__file__).resolve().parent / "demo_env.usd"), load=Usd.Stage.LoadNone)
+    from pxr import Usd, UsdGeom
+
+    stage = Usd.Stage.Open(str(Path(__file__).resolve().parents[1] / "demo_env.usd"), load=Usd.Stage.LoadNone)
     scene = ViewerScene(stage)
     front, surround = level_pose(np.array([0.1, 0.2, 0]), 0.7, -0.0245), level_pose(np.zeros(3), 0.2, -0.0245)
     arrays = {

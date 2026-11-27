@@ -139,7 +139,7 @@ def arm_params(urdf_path, npz_path, margins_m, grid_file):
 
 if __name__ == "__main__":  # self-check: the grid frames put the URDF's own arm surface inside the margins
     here = os.path.dirname(os.path.abspath(__file__))
-    urdf = os.path.join(here, "urdf", "excavator.urdf")
+    urdf = os.path.join(here, "..", "assets", "urdf", "excavator.urdf")
     out = os.path.join(here, "ws", "arm_grids.bin")
     p = arm_params(urdf, os.path.join(here, "arm_model.npz"), (0.09, 0.045, 0.10), out)
     blob = np.fromfile(out, np.uint8)

@@ -73,7 +73,8 @@ for _ in range(120):  # let the drives settle away from zero
 robot = Articulation(ROBOT)
 q = dict(zip(robot.dof_names, robot.get_dof_positions().numpy()[0].tolist()))
 print("joint angles (deg):", {k: round(math.degrees(v), 2) for k, v in q.items()})
-urdf = ET.parse(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "urdf", "excavator.urdf")).getroot()
+urdf_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(HERE).parent / "assets/urdf/excavator.urdf"
+urdf = ET.parse(urdf_path).getroot()
 poses = urdf_fk(urdf.findall("joint"), q)
 stage = omni.usd.get_context().get_stage()
 cache = UsdGeom.XformCache(Usd.TimeCode.Default())  # authored (USD) poses; PhysX does not write back to USD
@@ -85,7 +86,7 @@ for link in urdf.findall("link"):
     name = link.get("name")
     # URDF side: OBJ vertices -> link frame -> world.
     obj = visual.find("geometry/mesh").get("filename").removeprefix("file://")
-    lines = Path(obj).read_text().splitlines()
+    lines = (urdf_path.parent / obj).read_text().splitlines()
     verts = np.array([line.split()[1:4] for line in lines if line.startswith("v ")], dtype=float)
     urdf_world = apply(poses[name] @ origin_transform(visual), verts)
     # Sim side: mesh points -> authored body frame -> PhysX body pose (USD matrices are row-vector).

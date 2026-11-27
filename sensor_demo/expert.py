@@ -16,7 +16,7 @@ from scipy.optimize import least_squares
 from soil import PROFILE
 
 JOINTS = ("revolute_carriage", "revolute_lift", "revolute_tilt", "revolute_tool")
-URDF = Path(__file__).resolve().parent.parent / "ros2/urdf/excavator.urdf"
+URDF = Path(__file__).resolve().parent.parent / "assets/urdf/excavator.urdf"
 # The bucket mouth in the bucket link's (y, z): from the top of the back plate to the cutting edge.
 BACK, LIP = (0.0, *PROFILE[0]), (0.0, *PROFILE[-1])
 LEVEL, OPEN, DOWN, EMPTY = (math.radians(a) for a in (-176, -80, -96, -55))  # mouth pitch: carrying, reaching, cutting
@@ -61,7 +61,7 @@ class Arm:
         return np.array([lip[0], lip[2], math.atan2(lip[2] - back[2], lip[0] - back[0])])
 
     def solve(self, distance, height, pitch, near):
-        """Joints (lift, tilt, tool) that put the cutting edge there, closest to ``near``; the nearest reachable otherwise."""
+        """Joints placing the cutting edge there, closest to ``near``; the nearest reachable otherwise."""
 
         def miss(q):
             r, z, a = self.edge(*q)
@@ -78,7 +78,7 @@ class Expert:
         self.goals, self.scoops, self.done, self.strokes, self.pour = [], 0, True, [], True
 
     def start(self, soil, container, joints, scoops=1, pour=True):
-        """Begin an episode of ``scoops`` strokes from ``joints`` (JOINTS order [rad]), where the arm returns at the end.
+        """Begin ``scoops`` strokes from ``joints`` (JOINTS order [rad]), returning the arm there at the end.
 
         ``pour=False``: the digging task, each stroke ends holding the load up and the episode ends there.
         """
@@ -87,7 +87,7 @@ class Expert:
         self.pace = self.rng.uniform(*PACE)
 
     def sand(self, distance, azimuth, aside=0.0):
-        """Resting surface height at a point given by distance and direction from the slew axis, ``aside`` to its left."""
+        """Resting height at distance/direction from the slew axis, with ``aside`` offset to its left."""
         soil = self.soil
         x = distance * math.cos(azimuth) - aside * math.sin(azimuth)
         y = distance * math.sin(azimuth) + aside * math.cos(azimuth)

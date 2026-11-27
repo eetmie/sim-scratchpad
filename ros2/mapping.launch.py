@@ -58,7 +58,7 @@ def depth_to_cloud_params(calibration):
         "max_range_m": sensors.DEPTH_MAX_M,
         **box_params(urdf, skip=("lower_carriage", *GRID_LINKS)),
         **arm_params(
-            os.path.join(HERE, "urdf", "excavator.urdf"),
+            os.path.join(HERE, "..", "assets", "urdf", "excavator.urdf"),
             os.path.join(HERE, "arm_model.npz"),
             ARM_MARGINS_M,
             os.path.join(HERE, "ws", "arm_grids.bin"),

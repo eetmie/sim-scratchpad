@@ -4,6 +4,11 @@ Place this checkout at `IsaacLab/scripts/sim-scratchpad` and use Isaac Lab's
 Python environment. Run `git lfs install` before cloning or `git lfs pull` in
 an existing checkout to fetch the room scan.
 
+For development, start with [DEVELOPING.md](DEVELOPING.md): pipeline ownership,
+simulated-sand integration points, tests and output locations. Shared robot
+geometry lives in [assets/urdf/](assets/urdf/README.md); generated experiments
+belong in [logs/](logs/README.md).
+
 - Open `demo_env.usd` in Isaac Sim for the registered room splat and calibrated
   cabin and arm cameras. [IR capture, replay, and calibration](camera_calibration/README.md)
 - Run `uv run --no-sync python sensor_demo/demo.py --view soil` for the Newton

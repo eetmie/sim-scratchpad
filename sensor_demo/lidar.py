@@ -226,7 +226,7 @@ class SensorRig:
         self.soil, self.args = soil, args
         self.scene = TriangleScene(soil.device)
         self.names = body_names
-        self.robot = RobotGeometry(body_names, Path(__file__).resolve().parent.parent / "ros2/urdf")
+        self.robot = RobotGeometry(body_names, Path(__file__).resolve().parent.parent / "assets/urdf")
         self.rays = fan(args.lidar_step_deg)
         self.observed = self.oracle = np.full((HEIGHTMAP_SIZE, HEIGHTMAP_SIZE), np.nan, np.float32)
         self.cabin_id = body_names.index("upper_carriage")

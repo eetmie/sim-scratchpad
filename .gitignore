@@ -1,6 +1,10 @@
 __pycache__/
 *.pyc
-logs/
+logs/*
+!logs/README.md
+.cache/
+.pytest_cache/
+.ruff_cache/
 *.log
 sensor_demo/runs/
 assets/simready/.cache/

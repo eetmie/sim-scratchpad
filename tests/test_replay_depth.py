@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 import zstandard
-
 from replay_depth import ErrorStats, depth_error, selected_depth_frames
 
 
