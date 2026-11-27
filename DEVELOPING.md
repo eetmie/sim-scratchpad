@@ -17,7 +17,7 @@ Fetch LFS assets before starting the viewer. The main heightmap entry point is
 | Simulated soil | `sensor_demo/soil.py`: soil state; `surface.py`: rendered surface; `demo.py`: simulation loop |
 | Shared viewer helpers | `newton/`: input, cameras and mesh publishing; `sand.py` is the older lightweight sand model |
 | ROS transport | `ros2/viewer_bridge.py`, `viewer_scene.py`, `map_contract.py`; see [LATEST.md](ros2/LATEST.md) |
-| Shared assets | `assets/excavator_bucket.usd`, `assets/urdf/`, `assets/simready/` |
+| Shared assets | `assets/3dgs_40k_1m_sh3.usdz` (room scan), `assets/excavator_bucket.usd`, `assets/urdf/`, `assets/simready/` |
 | Tests | `tests/`: heightmap/replay/ROS contracts; subsystem tests stay beside calibration and soil code |
 | Inspection tools | `tools/`: reusable utilities with command-line arguments |
 | Generated output | `logs/<workflow>/<run>/`; soil recordings currently use `sensor_demo/runs/` |

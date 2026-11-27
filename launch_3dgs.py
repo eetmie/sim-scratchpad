@@ -138,9 +138,9 @@ def main(argv: list[str] | None = None) -> None:
 
     root = Path(__file__).resolve().parent
     stage_path = root / "demo_env.usd"
-    splat_path = root / "3dgs_40k_1m_sh3.usdz"
+    splat_path = root / "assets/3dgs_40k_1m_sh3.usdz"
     if not stage_path.is_file() or not splat_path.is_file():
-        raise FileNotFoundError("demo_env.usd and 3dgs_40k_1m_sh3.usdz must be next to this script")
+        raise FileNotFoundError("Expected demo_env.usd and assets/3dgs_40k_1m_sh3.usdz in this checkout")
     with splat_path.open("rb") as asset:
         if asset.read(4) != b"PK\x03\x04":
             raise ValueError("Room scan is not a USDZ archive. Fetch it with git lfs pull.")

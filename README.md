@@ -3,6 +3,8 @@
 Place this checkout at `IsaacLab/scripts/sim-scratchpad` and use Isaac Lab's
 Python environment. Run `git lfs install` before cloning or `git lfs pull` in
 an existing checkout to fetch the room scan.
+The scan is stored at `assets/3dgs_40k_1m_sh3.usdz`; `demo_env.usd` references it
+relative to this checkout.
 
 For development, start with [DEVELOPING.md](DEVELOPING.md): pipeline ownership,
 simulated-sand integration points, tests and output locations. Shared robot
