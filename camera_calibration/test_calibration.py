@@ -8,11 +8,23 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from pxr import Usd
+from pxr import Gf, Usd
 
 from . import BASE_STAGE
 from .fit_mount import errors, fit
-from .usd_cameras import apply, inspect
+from .usd_cameras import apply, inspect, pose
+
+
+@pytest.mark.parametrize(
+    "linear",
+    [np.diag([1.001, 1, 1]), [[1, 0.001, 0], [0, 1, 0], [0, 0, 1]], np.diag([-1, 1, 1])],
+    ids=["scale", "shear", "reflection"],
+)
+def test_camera_pose_rejects_nonrigid_transforms(linear):
+    transform = np.eye(4)
+    transform[:3, :3] = linear
+    with pytest.raises(ValueError, match="Camera pose must be rigid"):
+        pose(Gf.Matrix4d(*transform.ravel()), 1.0)
 
 
 def test_native_ir_fit_and_overlay(tmp_path: Path) -> None:

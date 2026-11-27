@@ -40,7 +40,9 @@ def pose(matrix: Gf.Matrix4d, meters_per_unit: float) -> dict:
     # Gf uses row vectors. The saved quaternion maps right/down/forward optical axes into the parent.
     transform = np.asarray(matrix).T
     rotation = transform[:3, :3]
-    if not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-6) or np.linalg.det(rotation) <= 0:
+    # Replay matrices are rounded to six decimals; composition carries that error into camera poses.
+    # Accept only roundoff here; Rotation.from_matrix projects it onto a proper rotation below.
+    if not np.allclose(rotation.T @ rotation, np.eye(3), rtol=0, atol=1e-5) or np.linalg.det(rotation) <= 0:
         raise ValueError("Camera pose must be rigid")
     return {
         "translation_m": (transform[:3, 3] * meters_per_unit).tolist(),

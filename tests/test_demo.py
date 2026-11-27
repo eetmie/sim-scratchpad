@@ -57,13 +57,17 @@ def test_explicit_dataset_session_remains_supported_without_falling_back(tmp_pat
 
 
 def test_demo_poses_move_the_scene_and_reset_without_editing_the_asset():
-    from pxr import Usd, UsdGeom
+    from camera_calibration.usd_cameras import cameras, describe
+    from scipy.spatial.transform import Rotation
+
+    from pxr import Gf, Usd, UsdGeom
 
     scene_path = ROOT / "demo_env.usd"
     original = scene_path.read_bytes()
     stage = Usd.Stage.Open(str(scene_path), load=Usd.Stage.LoadNone)
     stage.Load("/World/excavator_bucket")
     stage.SetEditTarget(stage.GetSessionLayer())
+    rig = cameras(stage)
     frames = load_replay(DEMO_REPLAY)
     assert DEMO_REPLAY.stat().st_size < 128 * 1024
     assert len(frames) == 110 and frames[0]["timestamp_ns"] == 0
@@ -74,6 +78,17 @@ def test_demo_poses_move_the_scene_and_reset_without_editing_the_asset():
             np.testing.assert_allclose(matrix[:3, :3].T @ matrix[:3, :3], np.eye(3), atol=2e-6)
             np.testing.assert_array_equal(matrix[:, 3], [0, 0, 0, 1])
         apply_transforms(stage, frame["transforms"], ops)
+        for camera in rig.values():
+            optical = describe(camera)["optical_to_world"]
+            world = camera.ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+            np.testing.assert_allclose(optical["translation_m"], world.Transform(Gf.Vec3d(0)), atol=1e-12)
+            assert np.linalg.norm(optical["quaternion_xyzw"]) == pytest.approx(1)
+            np.testing.assert_allclose(
+                Rotation.from_quat(optical["quaternion_xyzw"]).apply([0, 0, 1]),
+                world.TransformDir(Gf.Vec3d(0, 0, -1)).GetNormalized(),
+                rtol=0,
+                atol=2e-6,
+            )
         positions.append(
             np.asarray(
                 UsdGeom.XformCache().GetLocalToWorldTransform(stage.GetPrimAtPath("/World/excavator_bucket/tool_body"))
