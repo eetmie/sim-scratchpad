@@ -1,7 +1,7 @@
 """D435i optical depth and dataset-shaped terrain maps for the registered USD scene.
 
 Run ``python depth_mapping.py --help`` for a single capture, or use the live
-``launch_3dgs.py --depth-maps --dataset ...`` viewer. All USD edits are transient.
+``launch_3dgs.py --demo`` viewer. All USD edits are transient.
 """
 
 import argparse
@@ -12,35 +12,13 @@ from collections import deque
 from pathlib import Path
 
 import numpy as np
-
+from heightmap_config import load_profile as load_profile
 from robot_mapping import STREAMS, RobotPolicy, UsdRobotPose, fastdem_binary, millimetres
 
 ROOT = Path(__file__).resolve().parent
 UNKNOWN_MM = np.int16(-32768)
 UNKNOWN_AGE = np.uint16(65535)
 logger = logging.getLogger(__name__)
-
-
-def load_profile(dataset: Path, session: int = 0) -> dict:
-    """Read the recorded sensors and map geometry, without modifying the dataset."""
-    meta = json.loads((dataset / "meta/heightmaps.json").read_text())
-    sensors = {}
-    for name, key in STREAMS.items():
-        sensor = json.loads((dataset / f"native/session-{session:03d}/{key}.depth.json").read_text())
-        intr = sensor["depth_intrinsics"]
-        if sensor["rotation_deg"] not in (0, 180) or any(intr["coeffs"]):
-            raise ValueError("Expected rectified D435i depth with 0 or 180 degree image rotation")
-        if min(intr[k] for k in ("width", "height", "fx", "fy")) <= 0 or sensor["depth_scale_m"] <= 0:
-            raise ValueError("Invalid D435i intrinsics or depth scale")
-        sensors[name] = {"key": key, **sensor}
-    return {
-        "sensors": sensors,
-        "front": meta["front"],
-        "surround": meta["surround"],
-        "map_hz": meta["map_hz"],
-        "fps": meta["fps"],
-        "height_color_limit_m": meta["height_color_limit_m"],
-    }
 
 
 def optical_pose(ir_pose: dict, sensor: dict) -> np.ndarray:
@@ -171,9 +149,9 @@ class DepthMapping:
     def __init__(
         self,
         stage,
-        dataset: Path,
+        dataset: Path | None,
         out: Path,
-        ground_z: float = -0.0245,
+        ground_z: float | None = None,
         panel: bool = True,
         session: int = 0,
         *,
@@ -181,24 +159,25 @@ class DepthMapping:
         fastdem: Path | None = None,
         mapping: str = "robot",
         cad_reference: bool = False,
+        config: Path | None = None,
     ):
+        from camera_calibration.usd_cameras import author, cameras, describe
         from scipy.spatial.transform import Rotation
 
         import omni.replicator.core as rep
         from pxr import UsdGeom
 
-        from camera_calibration.usd_cameras import author, cameras, describe
-
         self.stage = stage
         self.out = out
+        self.profile = load_profile(dataset, session, config=config)
+        ground_z = self.profile["ground_z_stage_m"] if ground_z is None else ground_z
         self.ground_z = ground_z
-        self.profile = load_profile(dataset, session)
         self.backend = mapping
         self.cad_reference = cad_reference or mapping == "preview"
         self.robot_engine = None
         if mapping == "robot":
-            self.robot_policy = RobotPolicy(robot_repo, dataset, session)
-            self.pose_bridge = UsdRobotPose(stage, self.robot_policy.repo, ground_z)
+            self.robot_policy = RobotPolicy(robot_repo, dataset, session, config=config)
+            self.pose_bridge = UsdRobotPose(stage, self.robot_policy.repo, ground_z, tip=self.robot_policy.tool_tip)
             self.fastdem = fastdem_binary(fastdem)
             self.profile.update(self.robot_policy.provenance())
             self.profile["map_hz"] = self.robot_policy.policy["runtime"]["map_hz"]
@@ -312,11 +291,10 @@ class DepthMapping:
         Results contain recorded-orientation ``z16`` and ``robot_mask`` images
         and an unrotated optical-to-world column-vector ``pose`` in metres.
         """
+        from camera_calibration.usd_cameras import ROBOT, describe
         from scipy.spatial.transform import Rotation
 
         import omni.replicator.core as rep
-
-        from camera_calibration.usd_cameras import ROBOT, describe
 
         now = time.monotonic()
         self.capture_clock = {
@@ -379,9 +357,9 @@ class DepthMapping:
 
     def update(self, force: bool = False) -> bool:
         """Capture at 5 Hz wall time; return whether a new map was produced."""
-        from pxr import UsdGeom
-
         from camera_calibration.usd_cameras import ROBOT
+
+        from pxr import UsdGeom
 
         now = time.monotonic()
         if not force and self.last is not None and now - self.last < 1 / self.profile["map_hz"]:
@@ -594,12 +572,13 @@ class DepthMapping:
 
 
 def main() -> None:
+    from heightmap_config import configuration_arguments
     from robot_mapping import mapping_arguments
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dataset", type=Path, required=True)
+    configuration_arguments(parser)
     parser.add_argument("--out", type=Path, default=ROOT / "logs/depth_mapping")
-    parser.add_argument("--ground-z", type=float, default=-0.0245, help="Registered sand surface in stage metres")
+    parser.add_argument("--ground-z", type=float, help="Override the profile's ground reference in stage metres")
     mapping_arguments(parser)
     args = parser.parse_args()
     # Reuse the viewer's launch and shared shader-cache settings.
@@ -610,15 +589,17 @@ def main() -> None:
         "--frames",
         "1",
         "--depth-maps",
-        "--dataset",
-        str(args.dataset),
         "--depth-out",
         str(args.out),
-        "--ground-z",
-        str(args.ground_z),
         "--mapping",
         args.mapping,
     ]
+    if args.dataset is not None:
+        options += ["--dataset", str(args.dataset)]
+    if args.config is not None:
+        options += ["--config", str(args.config)]
+    if args.ground_z is not None:
+        options += ["--ground-z", str(args.ground_z)]
     if args.robot_repo:
         options += ["--robot-repo", str(args.robot_repo)]
     if args.fastdem:

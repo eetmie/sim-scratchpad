@@ -47,15 +47,23 @@ uv run --no-sync python launch_3dgs.py --snapshot logs/3dgs/overview.png
 uv run --no-sync python launch_3dgs.py --headless --frames 120 --camera cabin --snapshot logs/3dgs/cabin.png
 ```
 
-Add the recorded D435i depth-camera calibration, live depth panels and terrain maps:
+Run the full scene with live D435i depth, terrain maps and a small looping motion demo:
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --depth-maps --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete
+uv run --no-sync python launch_3dgs.py --demo
 ```
 
-This adds full-resolution cabin/arm depth, a 64x64 front map and a 160x160
-surrounding FastDEM map using the real robot's filtering and fusion. Add
-`--replay logs/depth_replay/episode-002/replay.json` to loop the saved motion.
+This uses the checked-in [camera/filter profile](config/heightmaps/README.md) and
+[motion sample](assets/motions/README.md). No recorded dataset or files from
+`logs/` are needed. It shows full-resolution cabin/arm depth, a 64x64 front map
+and a 160x160 surrounding FastDEM map. Use `--depth-maps` instead of `--demo`
+for a stationary scene, or `--replay PATH` for another saved motion.
+
+The shared mapper still requires a `kaivuriprokkis` checkout (`--robot-repo PATH`
+or `KAIVURI_REPO`) and a locally built FastDEM adapter. See
+[setup on another computer](DEVELOPING.md#run-on-another-computer).
+`--config PATH` selects another simulator profile; `--dataset PATH` explicitly
+uses recorded calibration and the robot checkout's current policy for comparisons.
 [Calibration, launch commands, exports and filter experiments](DEPTH_MAPPING.md).
 
 Publish processed heightmaps and FastDEM terrain for remote RViz with `--ros`.

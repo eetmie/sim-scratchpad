@@ -45,7 +45,7 @@ def test_flat_ground_binary_round_trip_and_persistent_age():
     archive.update((optical, pose))
     archive.update()  # No returns: keep known terrain and advance the accepted-update age.
     result = subprocess.run(
-        [str(EXE), str(ROOT / "ros2/fastdem.yaml")],
+        [str(EXE), str(ROOT / "config/heightmaps/fastdem.yaml")],
         input=stream.getvalue(),
         capture_output=True,
         timeout=30,

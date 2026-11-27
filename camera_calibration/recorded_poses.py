@@ -6,9 +6,10 @@ from pathlib import Path
 
 import numpy as np
 import pyarrow.parquet as pq
+from scene_motion import apply_transforms as apply_transforms
 from scipy.spatial.transform import Rotation, Slerp
 
-from pxr import Gf, Usd, UsdGeom, UsdPhysics
+from pxr import Usd, UsdGeom, UsdPhysics
 
 from . import BASE_STAGE
 from .usd_cameras import ROBOT
@@ -104,19 +105,6 @@ def replay_plan(dataset, episode, start, stop, stride, timestamp_source="ir"):
             )
         views[name] = frames
     return {"views": views, "episode": episode, "timestamp_source": timestamp_source}
-
-
-def apply_transforms(stage, transforms, ops):
-    """Apply a calibration replay pose on the caller's edit layer, reusing USD ops."""
-    for path, matrix in transforms.items():
-        if path not in ops:
-            xform = UsdGeom.Xformable(stage.GetPrimAtPath(path))
-            if not xform:
-                raise ValueError(f"Replay target does not exist: {path}")
-            op = xform.AddTransformOp(opSuffix="recordedReplay")
-            xform.SetXformOpOrder([op], xform.GetResetXformStack())
-            ops[path] = op
-        ops[path].Set(Gf.Matrix4d(*np.asarray(matrix).ravel()))
 
 
 def main():

@@ -12,14 +12,14 @@ workspace build is required for this path. Isaac's bridge supplies its ROS runti
 ## Ubuntu setup and launch
 
 Use this checkout with its LFS assets and Isaac Lab's existing Python 3.12 / Isaac Sim 6.2
-environment. Copy the dataset and the current `kaivuriprokkis` checkout as well. The existing
+environment. Clone the matching `kaivuriprokkis` checkout as well. Camera/filter
+settings and the small motion demo are included; no dataset copy is required. The existing
 `ros2/setup_ws.sh` is for the separate ROS-side depth mapper; it is unnecessary here.
 
 Build the ROS-free FastDEM adapter on Ubuntu (the Windows executable cannot be reused):
 
 ```bash
 export KAIVURI_REPO="$HOME/Documents/GitHub/kaivuriprokkis"  # adapt to the Ubuntu checkout
-export KAIVURI_DATASET="$HOME/Desktop/heightmap_tests_complete"
 uv run --no-sync --with cmake --with ninja python build_fastdem.py --robot-repo "$KAIVURI_REPO"
 ```
 
@@ -27,7 +27,7 @@ In a **clean simulator terminal**, without `/opt/ros/*` sourced:
 
 ```bash
 export ROS_DOMAIN_ID=42
-bash ros2/run_latest.sh --dataset "$KAIVURI_DATASET" --robot-repo "$KAIVURI_REPO"
+bash ros2/run_latest.sh --demo --robot-repo "$KAIVURI_REPO"
 ```
 
 `run_latest.sh` selects Isaac's bundled Jazzy and Fast DDS using the existing `ros_env.sh`.
@@ -36,12 +36,16 @@ path is `.cache/fastdem/build/fastdem_replay`, with a fallback to the existing
 `logs/fastdem/build/fastdem_replay`; override with `--fastdem PATH`.
 The launcher enables `isaacsim.ros2.bridge` before importing `rclpy`.
 
-To replay a saved plan while preserving exposure timing, add
+`--demo` loops the bundled pose sequence using its relative timestamps; omit it
+for the stationary scene. Both use `config/heightmaps/` by default. `--config PATH`
+selects another profile. To use recorded dataset calibration and a saved plan, add
+`--dataset PATH` and
 `--replay logs/depth_replay/episode-002/replay.json`. Plans live in ignored `logs/`,
 so copy yours to Ubuntu or generate a new one from the dataset:
 
 ```bash
 mkdir -p logs/ros-replay
+export KAIVURI_DATASET="$HOME/Desktop/heightmap_tests_complete"
 uv run --no-sync python -m camera_calibration.recorded_poses "$KAIVURI_DATASET" \
   --episode 2 --start 12 --stop 672 --stride 6 --timestamps depth --out logs/ros-replay/episode-002.json
 bash ros2/run_latest.sh --dataset "$KAIVURI_DATASET" --robot-repo "$KAIVURI_REPO" \

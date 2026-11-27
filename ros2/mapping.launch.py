@@ -59,7 +59,7 @@ def depth_to_cloud_params(calibration):
         **box_params(urdf, skip=("lower_carriage", *GRID_LINKS)),
         **arm_params(
             os.path.join(HERE, "..", "assets", "urdf", "excavator.urdf"),
-            os.path.join(HERE, "arm_model.npz"),
+            os.path.join(HERE, "..", "assets", "arm_model.npz"),
             ARM_MARGINS_M,
             os.path.join(HERE, "ws", "arm_grids.bin"),
         ),
@@ -102,7 +102,10 @@ def generate_launch_description():
                 package="fastdem_ros2",
                 executable="fastdem_node",
                 name="fastdem",
-                parameters=[{"config_file": os.path.join(HERE, "fastdem.yaml")}, sim_time],
+                parameters=[
+                    {"config_file": os.path.join(HERE, "..", "config", "heightmaps", "fastdem.yaml")},
+                    sim_time,
+                ],
                 output="screen",
             ),
         ]

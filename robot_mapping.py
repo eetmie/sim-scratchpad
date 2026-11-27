@@ -1,7 +1,8 @@
 """One adapter to the robot's projection, masking, fusion and FastDEM code.
 
 Used by the Isaac viewer, paired depth comparisons and offline filter benchmarks.
-The robot checkout remains the owner of the algorithms and default parameters.
+The robot checkout owns the algorithms. The live simulator uses checked-in settings;
+recorded comparisons explicitly select the dataset and robot checkout's settings.
 """
 
 import copy
@@ -16,10 +17,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+from heightmap_config import STREAMS, configuration_files
 from threadpoolctl import ThreadpoolController
 
 ROOT = Path(__file__).resolve().parent
-STREAMS = {"cabin": "cam2", "arm": "cam1"}
 
 
 @functools.lru_cache(maxsize=1)
@@ -85,33 +86,44 @@ def millimetres(height):
 
 
 class RobotPolicy:
-    def __init__(self, repo, dataset, session=0, *, empirical_correction=False, overrides=None):
+    def __init__(self, repo, dataset=None, session=0, *, config=None, empirical_correction=False, overrides=None):
+        metadata, files = configuration_files(dataset, session, config=config)
+        self.metadata = json.loads(metadata.read_text(encoding="utf-8"))
         self.repo = robot_checkout(repo)
         self.mapper = load_robot_mapper(self.repo)
         native = self.repo / "native_stack"
-        self.policy = json.loads((native / "config/heightmap_pipeline.json").read_text())
+        if dataset is None:
+            pipeline = metadata.parent / "pipeline.json"
+            arm_model = (metadata.parent / self.metadata["arm_model"]).resolve()
+            self.config = metadata.parent / "fastdem.yaml"
+            self.tool_tip = self.metadata["tool_tip_m"]
+        else:
+            pipeline = native / "config/heightmap_pipeline.json"
+            arm_model = native / "config/arm_model.npz"
+            self.config = native / "tools/heightmap_bench/fastdem.yaml"
+            self.tool_tip = None
+        self.sources = {
+            "tools/heightmap_bench/mapper.py": native / "tools/heightmap_bench/mapper.py",
+            "tools/sand_height.py": native / "tools/sand_height.py",
+            "pipeline": pipeline,
+            "arm_model": arm_model,
+            "fastdem_config": self.config,
+            "heightmaps": metadata,
+            **{f"camera/{name}": files[key] for name, key in STREAMS.items()},
+        }
+        self.policy = json.loads(pipeline.read_text(encoding="utf-8"))
         self.policy["projection"].update(overrides or {})
-        self.projection = SimpleNamespace(**self.policy["projection"], arm_model=str(native / "config/arm_model.npz"))
+        self.projection = SimpleNamespace(**self.policy["projection"], arm_model=str(arm_model))
         self.mapper.sh.load_arm(self.projection)
         self.arm = self.mapper.sh.ARM
         self.blas = blas_controller()
-        self.metadata = json.loads((dataset / "meta/heightmaps.json").read_text())
         self.calibration = copy.deepcopy(self.metadata["calibration"])
         if not empirical_correction:
             self.calibration["depth_correction"] = {}
-        files = {key: dataset / f"native/session-{session:03d}/{key}.depth.json" for key in STREAMS.values()}
         self.projector = self.mapper.DepthProjector(self.calibration, files, self.projection)
-        self.config = native / "tools/heightmap_bench/fastdem.yaml"
         self.revision = subprocess.check_output(["git", "-C", str(self.repo), "rev-parse", "HEAD"], text=True).strip()
 
     def provenance(self):
-        sources = [
-            "tools/heightmap_bench/mapper.py",
-            "tools/sand_height.py",
-            "config/heightmap_pipeline.json",
-            "config/arm_model.npz",
-            "tools/heightmap_bench/fastdem.yaml",
-        ]
         return {
             "backend": "robot",
             "robot_repo": str(self.repo),
@@ -119,7 +131,7 @@ class RobotPolicy:
             "pipeline": self.policy,
             "calibration": self.calibration,
             "source_sha256": {
-                path: hashlib.sha256((self.repo / "native_stack" / path).read_bytes()).hexdigest() for path in sources
+                name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in self.sources.items()
             },
             "map_age_units": "accepted paired map updates; 65535 means unknown",
         }
@@ -166,12 +178,16 @@ class RobotPolicy:
 class UsdRobotPose:
     """Translate live USD poses to the robot's level frame and FK status contract."""
 
-    def __init__(self, stage, repo, ground_z):
-        import yaml
-
+    def __init__(self, stage, repo, ground_z, *, tip=None):
         self.stage, self.ground_z = stage, ground_z
-        config = robot_checkout(repo) / "configuration_files/profiles/jetson/control_config.yaml"
-        self.tip = np.asarray(yaml.safe_load(config.read_text())["robot"]["tool"]["parent_to_tip_xyz"])
+        if tip is None:
+            import yaml
+
+            config = robot_checkout(repo) / "configuration_files/profiles/jetson/control_config.yaml"
+            tip = yaml.safe_load(config.read_text())["robot"]["tool"]["parent_to_tip_xyz"]
+        self.tip = np.asarray(tip, dtype=float)
+        if self.tip.shape != (3,) or not np.isfinite(self.tip).all():
+            raise ValueError("Tool tip must contain three finite coordinates in metres")
 
     def sample(self, camera_poses):
         from scipy.spatial.transform import Rotation

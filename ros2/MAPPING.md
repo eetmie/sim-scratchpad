@@ -15,12 +15,12 @@ ros2 launch scripts/sim-scratchpad/ros2/mapping.launch.py               # sim ti
 - `depth_to_cloud_cpp/`: depth image -> cloud with URDF link boxes removed at the image stamp (`robot_boxes.py`).
 - `fastdem.patch`: scan-time map stamps, out-of-order / clock-reset handling, steady-clock TF buffer, pinned nanoGrid.
   Its `fastdem/` core part is kaivuriprokkis `native_stack/tools/heightmap_bench/fastdem-core.patch`.
-- `fastdem.yaml` is identical to kaivuriprokkis `heightmap_bench/fastdem.yaml`.
+- `../config/heightmaps/fastdem.yaml` is the validated copy of kaivuriprokkis `heightmap_bench/fastdem.yaml`.
 
 `depth_to_cloud` runs the robot's arm filter (kaivuriprokkis `heightmap_bench/mapper.py`, values from its
 `config/heightmap_pipeline.json`, set at the top of `mapping.launch.py`):
 
-- boom/arm/bucket: `arm_model.npz` distance grids (copied from kaivuriprokkis `config/arm_model.npz`, built from this
+- boom/arm/bucket: `../assets/arm_model.npz` distance grids (copied from kaivuriprokkis `config/arm_model.npz`, built from this
   URDF by its `tools/arm_model.py`), margins 0.09 / 0.045 / 0.10 m; `arm_grid.py` places them on the URDF links and
   refuses an npz whose link lengths do not match this URDF. Other links (upper carriage) keep their padded boxes.
 - silhouette: pixels within 8 px of the projected arm model (the robot's 2 cells at stride 4).

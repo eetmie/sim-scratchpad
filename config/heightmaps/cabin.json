@@ -1,0 +1,59 @@
+{
+  "synthetic": false,
+  "serial": "141722076647",
+  "depth_scale_m": 9.99999975e-05,
+  "disparity_shift": 0,
+  "ir_index": 1,
+  "rotation_deg": 0,
+  "note": "intrinsics/extrinsics are SDK values for unrotated pixels",
+  "depth_intrinsics": {
+    "width": 640,
+    "height": 480,
+    "fx": 384.375977,
+    "fy": 384.375977,
+    "ppx": 325.457062,
+    "ppy": 236.22963,
+    "model": "Brown Conrady",
+    "coeffs": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "ir_intrinsics": {
+    "width": 640,
+    "height": 480,
+    "fx": 384.375977,
+    "fy": 384.375977,
+    "ppx": 325.457062,
+    "ppy": 236.22963,
+    "model": "Brown Conrady",
+    "coeffs": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "depth_to_ir_extrinsics": {
+    "rotation_column_major": [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "translation_m": [
+      0,
+      0,
+      0
+    ]
+  }
+}

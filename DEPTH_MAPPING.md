@@ -1,11 +1,11 @@
 # D435i depth and terrain mapping
 
 The 3DGS viewer can render depth from the cabin and arm D435i mounts and build
-terrain maps with the layout in `heightmap_tests_complete`. Run from this checkout
+terrain maps with the checked-in camera/filter profile. Run from this checkout
 using Isaac Lab's existing environment:
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --depth-maps --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete
+uv run --no-sync python launch_3dgs.py --demo
 ```
 
 The **D435i depth and terrain maps** window shows both depth images, the front
@@ -13,7 +13,7 @@ map and the accumulated surrounding map. **The default is now the real robot's
 masking, cabin-first fusion and FastDEM**, shared with the offline comparison
 through `robot_mapping.py`. Capture uses full 640x480 images; the robot's stride-4
 projection produces 160x120 depth/mask previews. Red marks self-filtered pixels.
-The maps target the robot profile's 5 Hz, subject to GPU and capture time.
+The maps target the simulator profile's 5 Hz, subject to GPU and capture time.
 The sensors follow the live USD link transforms. Physics
 starts paused; rendering depth preserves the current playback state. Moving the
 fixed base clears the surrounding map to avoid retaining cells in the wrong frame.
@@ -22,10 +22,12 @@ Use **Save current depth + maps** to export the current result and **Clear
 accumulated map** to restart coverage. Closing the viewer also saves the final
 capture. All outputs default to `logs/depth_mapping/`; use `--depth-out` to change
 that location. Camera and render-product changes are authored in the session
-layer. The dataset is read-only.
+layer. No dataset is needed for this viewer; settings live in
+[`config/heightmaps/`](config/heightmaps/README.md). `--demo` enables depth/maps
+and the bundled approximately 22-second motion. `--depth-maps` alone opens the
+stationary scene. `--config PATH` selects another simulator profile.
 
-Loop the saved recorded motion immediately, without rerendering the offline
-comparison first:
+Play an existing recorded replay with its original dataset calibration instead:
 
 ```powershell
 uv run --no-sync python launch_3dgs.py --depth-maps --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete --replay logs/depth_replay/episode-002/replay.json
@@ -41,13 +43,15 @@ prototype; the D435i and FastDEM demo uses stereo-camera depth.
 For one headless capture:
 
 ```powershell
-uv run --no-sync python depth_mapping.py --dataset C:/Users/sh23937/Desktop/heightmap_tests_complete --out logs/depth_mapping/capture
+uv run --no-sync python depth_mapping.py --out logs/depth_mapping/capture
 ```
 
 ## Sensor calibration and depth
 
-The tools read `native/session-000/cam2.depth.json` for the cabin and
-`cam1.depth.json` for the arm. Each uses its own recorded focal lengths, principal
+The default profile reads `config/heightmaps/cabin.json` and `arm.json`.
+An explicit `--dataset PATH` uses `native/session-000/cam2.depth.json` for the
+cabin and `cam1.depth.json` for the arm, plus the robot checkout's filter policy.
+Each uses its own calibrated focal lengths, principal
 point, image size, depth scale and image rotation. The existing fitted IR cameras
 are preserved. New sibling depth cameras compose those fitted IR mounts with the
 SDK's depth-to-IR extrinsics. This includes the arm's 49.896 mm stereo baseline.
@@ -65,7 +69,8 @@ Both cameras contribute with the robot's range, annulus and height crop.
 
 ## Map format and exports
 
-Map geometry comes from `meta/heightmaps.json`:
+Map geometry comes from `config/heightmaps/heightmaps.json` by default, or the
+explicit dataset's `meta/heightmaps.json`:
 
 | Output | Layout | Frame |
 | --- | --- | --- |

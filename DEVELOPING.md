@@ -3,7 +3,8 @@
 This is an independent repository inside Isaac Lab. Use the enclosing Isaac Lab
 Python environment (`uv run --no-sync`) and run commands from this checkout.
 Fetch LFS assets before starting the viewer. The main heightmap entry point is
-`launch_3dgs.py --depth-maps`; the Newton soil demo has its own entry point.
+`launch_3dgs.py --demo` (motion plus depth/maps) or `--depth-maps` (stationary).
+The Newton soil demo has its own entry point.
 
 ## Find the code
 
@@ -12,12 +13,14 @@ Fetch LFS assets before starting the viewer. The main heightmap entry point is
 | Viewer | `launch_3dgs.py`: app lifecycle, replay, capture scheduling, optional ROS |
 | Simulated depth | `depth_mapping.py`: calibrated cameras, render/readback, maps and exports |
 | Robot mapping | `robot_mapping.py`: bridge to the external robot policy and FastDEM |
+| Simulator settings | `config/heightmaps/`: camera calibration, filter policy, ground reference and FastDEM settings |
+| Demo motion | `assets/motions/excavator_demo.json`, played by `scene_motion.py` |
 | Calibration | `camera_calibration/`: camera mounts, recorded poses and calibration tools |
 | Offline comparisons | `replay_depth.py`, `offline_robot_maps.py`, `benchmark_robot_maps.py` |
 | Simulated soil | `sensor_demo/soil.py`: soil state; `surface.py`: rendered surface; `demo.py`: simulation loop |
 | Shared viewer helpers | `newton/`: input, cameras and mesh publishing; `sand.py` is the older lightweight sand model |
 | ROS transport | `ros2/viewer_bridge.py`, `viewer_scene.py`, `map_contract.py`; see [LATEST.md](ros2/LATEST.md) |
-| Shared assets | `assets/3dgs_40k_1m_sh3.usdz` (room scan), `assets/excavator_bucket.usd`, `assets/urdf/`, `assets/simready/` |
+| Shared assets | Room scan, robot USD/URDF, arm mask, demo motion and SimReady objects under `assets/` |
 | Tests | `tests/`: heightmap/replay/ROS contracts; subsystem tests stay beside calibration and soil code |
 | Inspection tools | `tools/`: reusable utilities with command-line arguments |
 | Generated output | `logs/<workflow>/<run>/`; soil recordings currently use `sensor_demo/runs/` |
@@ -38,10 +41,24 @@ demo_env.usd + calibrated cabin/arm cameras
     -> latest.npz / viewer panels / optional ViewerRosBridge
 ```
 
-The `kaivuriprokkis` checkout owns the mapping algorithms and default parameters.
-Set `KAIVURI_REPO` or pass `--robot-repo`; do not copy its filter implementations
-into the simulator. Pass the recording directory with `--dataset`. The dataset
-supplies camera calibration and map geometry and is read-only.
+The `kaivuriprokkis` checkout owns the mapping algorithms. Set `KAIVURI_REPO` or
+pass `--robot-repo`; do not copy its filter implementations into the simulator.
+The simulator owns its validated settings in `config/heightmaps/`, including the
+camera/map profile and filter policy. `--config PATH` selects another profile.
+No dataset is needed for the viewer or the bundled motion demo.
+
+`--dataset PATH` explicitly selects recorded camera/map calibration and the robot
+checkout's current filter settings for comparisons. It is mutually exclusive
+with `--config`, and remains required by the offline recorded-data tools.
+
+## Run on another computer
+
+Use the same Isaac Lab checkout/version with Python 3.12 and Isaac Sim 6.2.
+Initialize that environment with `uv sync --extra isaacsim` from its root if
+needed. Clone this repository under `IsaacLab/scripts/sim-scratchpad`, run
+`git lfs pull` there, and clone the matching `kaivuriprokkis` revision (the
+profile records its baseline revision). No `heightmap_tests_complete` copy or
+old `logs/` directory is required. Run the following from sim-scratchpad.
 
 Build FastDEM once on each development machine:
 
@@ -49,18 +66,21 @@ Build FastDEM once on each development machine:
 uv run --no-sync --with cmake --with ninja python build_fastdem.py --llvm-mingw --robot-repo C:/path/to/kaivuriprokkis
 ```
 
-On Linux omit `--llvm-mingw`. New builds use `.cache/fastdem/`; the runtime falls
+On Linux omit `--llvm-mingw` and have a C++ toolchain installed.
+New builds use `.cache/fastdem/`; the runtime falls
 back to the existing `logs/fastdem/` build on older checkouts. Do not move a
 configured CMake tree: its cache contains absolute paths. `--work` changes the
 build location and `--fastdem` selects a particular executable.
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --depth-maps --dataset C:/path/to/heightmap_tests_complete --robot-repo C:/path/to/kaivuriprokkis --depth-out logs/depth_mapping/sand-baseline
+uv run --no-sync python launch_3dgs.py --demo --robot-repo C:/path/to/kaivuriprokkis --depth-out logs/depth_mapping/sand-baseline
 uv run --no-sync python tools/inspect_heightmaps.py logs/depth_mapping/sand-baseline --plot
 ```
 
 Use the viewer's save button or close it to export a capture. Detailed formats,
 replay commands and experiments are in [DEPTH_MAPPING.md](DEPTH_MAPPING.md).
+Use `--depth-maps` instead of `--demo` for a stationary scene. The motion sample
+is about 99 KiB and only animates poses; it does not drive hydraulic physics.
 
 ## Adding simulated sand
 
@@ -89,7 +109,7 @@ poses and capture timestamps before that restriction can be removed.
 Preserve the existing output contract: 64x64 front and 160x160 surround maps,
 rows decreasing X and columns decreasing Y, ground-relative int16 millimetres,
 `-32768` unknown and uint16 ages with `65535` unknown. ROS exposes float metre
-heights with NaN for unknown. Dataset metadata remains authoritative for grid
+heights with NaN for unknown. The selected profile or dataset defines grid
 bounds and resolution. Clear accumulated maps when resetting an episode or
 changing the fixed-base reference.
 

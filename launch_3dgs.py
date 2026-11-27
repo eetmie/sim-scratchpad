@@ -3,7 +3,6 @@
 import argparse
 import asyncio
 import bisect
-import json
 import logging
 import math
 import time
@@ -61,11 +60,11 @@ def validate_ros_arguments(parser, args):
 def start_ros(args, stage, depth_mapping, replay, app):
     if not args.ros:
         return None, None, None
-    import omni.kit.app
-
     from ros2.map_contract import FrameClock
     from ros2.viewer_bridge import ViewerRosBridge
     from ros2.viewer_scene import ViewerScene
+
+    import omni.kit.app
 
     manager = omni.kit.app.get_app().get_extension_manager()
     manager.set_extension_enabled_immediate("isaacsim.ros2.bridge", True)
@@ -99,8 +98,10 @@ def start_ros(args, stage, depth_mapping, replay, app):
     return bridge, scene, clock
 
 
-def main(argv: list[str] | None = None) -> None:
-    from robot_mapping import fastdem_binary, mapping_arguments, robot_checkout
+def parse_arguments(argv: list[str] | None = None):
+    from heightmap_config import configuration_arguments
+    from robot_mapping import mapping_arguments
+    from scene_motion import DEMO_REPLAY
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--camera", choices=("perspective", "cabin", "arm"), default="perspective")
@@ -108,25 +109,34 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--frames", type=int, default=0, help="Close after this many frames; 0 keeps the window open.")
     parser.add_argument("--snapshot", type=Path, help="Save the initial viewport as a PNG after rendering 120 frames.")
     parser.add_argument("--depth-maps", action="store_true", help="Show D435i depth and terrain-map panels.")
-    parser.add_argument(
-        "--dataset", type=Path, help="Robot dataset containing meta/heightmaps.json and native sessions."
-    )
+    configuration_arguments(parser)
     parser.add_argument("--depth-out", type=Path, default=Path("logs/depth_mapping"))
-    parser.add_argument("--ground-z", type=float, default=-0.0245, help="Registered sand surface in stage metres.")
-    parser.add_argument(
+    parser.add_argument("--ground-z", type=float, help="Override the profile's ground reference in stage metres.")
+    motion = parser.add_mutually_exclusive_group()
+    motion.add_argument("--demo", action="store_true", help="Enable depth/maps and loop the bundled excavator motion.")
+    motion.add_argument(
         "--replay", type=Path, help="Loop a saved replay.json without regenerating the offline comparison"
     )
     mapping_arguments(parser)
     ros_arguments(parser)
     args = parser.parse_args(argv)
+    if args.demo:
+        args.depth_maps = True
+        args.replay = DEMO_REPLAY
     validate_ros_arguments(parser, args)
-    if args.depth_maps and args.dataset is None:
-        parser.error("--depth-maps requires --dataset")
     if args.frames < 0 or (args.headless and not args.frames):
         parser.error("--headless requires --frames > 0; --frames must not be negative")
+    return args
+
+
+def main(argv: list[str] | None = None) -> None:
+    from robot_mapping import fastdem_binary, robot_checkout
+    from scene_motion import apply_transforms, load_replay
+
+    args = parse_arguments(argv)
     if args.depth_maps and args.mapping == "robot":
         args.robot_repo, args.fastdem = robot_checkout(args.robot_repo), fastdem_binary(args.fastdem)
-    replay = json.loads(args.replay.read_text())["views"]["cabin"] if args.replay else None
+    replay = load_replay(args.replay) if args.replay else None
     if replay:
         replay_times = [(f["timestamp_ns"] - replay[0]["timestamp_ns"]) * 1e-9 for f in replay]
         replay_duration = replay_times[-1] + (replay_times[1] if len(replay) > 1 else 0.2)
@@ -183,6 +193,7 @@ def main(argv: list[str] | None = None) -> None:
                 robot_repo=args.robot_repo,
                 fastdem=args.fastdem,
                 mapping=args.mapping,
+                config=args.config,
             )
             logger.info("D435i depth and terrain maps enabled; save directory: %s", args.depth_out.resolve())
 
@@ -203,8 +214,6 @@ def main(argv: list[str] | None = None) -> None:
                     )
                 ros_bridge.spin()
             if replay:
-                from camera_calibration.recorded_poses import apply_transforms
-
                 if ros_clock is not None and ros_clock.mode == "replay":
                     loop, index = divmod(ros_sample, len(replay))
                 else:

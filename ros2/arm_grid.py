@@ -141,7 +141,7 @@ if __name__ == "__main__":  # self-check: the grid frames put the URDF's own arm
     here = os.path.dirname(os.path.abspath(__file__))
     urdf = os.path.join(here, "..", "assets", "urdf", "excavator.urdf")
     out = os.path.join(here, "ws", "arm_grids.bin")
-    p = arm_params(urdf, os.path.join(here, "arm_model.npz"), (0.09, 0.045, 0.10), out)
+    p = arm_params(urdf, os.path.join(here, "..", "assets", "arm_model.npz"), (0.09, 0.045, 0.10), out)
     blob = np.fromfile(out, np.uint8)
     pose, _, points = _upper_frame(urdf)
     offset = 0
