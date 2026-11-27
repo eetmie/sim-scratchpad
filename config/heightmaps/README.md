@@ -28,7 +28,7 @@ the selected configuration hashes.
 `--dataset PATH` explicitly selects recorded calibration and the robot checkout's
 current policy for comparison work. It is mutually exclusive with `--config`.
 Replay generation and real-versus-sim comparisons continue to require recordings.
-Normal demos use `uv run --no-sync python launch_3dgs.py --demo`.
+Normal demos use `uv run --no-sync python launch_3dgs.py --mode replay`.
 
 Edit `pipeline.json` for simulator filter experiments. The older ROS-side C++
 mapping prototype in `ros2/mapping.launch.py` still has its own projection

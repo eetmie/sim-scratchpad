@@ -3,8 +3,9 @@
 This is an independent repository inside Isaac Lab. Use the enclosing Isaac Lab
 Python environment (`uv run --no-sync`) and run commands from this checkout.
 Fetch LFS assets before starting the viewer. The main heightmap entry point is
-`launch_3dgs.py --demo` (motion plus depth/maps) or `--depth-maps` (stationary).
-The Newton soil demo has its own entry point.
+`launch_3dgs.py --mode replay` (motion plus depth/maps) or `--depth-maps` (stationary).
+`--mode gamepad` drives the camera/map demo with the external arm/slew MLPs;
+`--nodynamics` selects direct joint speeds. The Newton soil demo has its own entry point.
 
 ## Find the code
 
@@ -15,6 +16,8 @@ The Newton soil demo has its own entry point.
 | Robot mapping | `robot_mapping.py`: bridge to the external robot policy and FastDEM |
 | Simulator settings | `config/heightmaps/`: camera calibration, filter policy, ground reference and FastDEM settings |
 | Demo motion | `assets/motions/excavator_demo.json`, played by `scene_motion.py` |
+| Gamepad motion | `hydraulic_motion.py`: USD joint-frame FK, external MLP loading and fixed 100 Hz worker |
+| Compact IR views | `ir_views.py`: scaled camera calibration and grayscale render products |
 | Calibration | `camera_calibration/`: camera mounts, recorded poses and calibration tools |
 | Offline comparisons | `replay_depth.py`, `offline_robot_maps.py`, `benchmark_robot_maps.py` |
 | Simulated soil | `sensor_demo/soil.py`: soil state; `surface.py`: rendered surface; `demo.py`: simulation loop |
@@ -73,13 +76,13 @@ configured CMake tree: its cache contains absolute paths. `--work` changes the
 build location and `--fastdem` selects a particular executable.
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --demo --robot-repo C:/path/to/kaivuriprokkis --depth-out logs/depth_mapping/sand-baseline
+uv run --no-sync python launch_3dgs.py --mode replay --robot-repo C:/path/to/kaivuriprokkis --depth-out logs/depth_mapping/sand-baseline
 uv run --no-sync python tools/inspect_heightmaps.py logs/depth_mapping/sand-baseline --plot
 ```
 
 Use the viewer's save button or close it to export a capture. Detailed formats,
 replay commands and experiments are in [DEPTH_MAPPING.md](DEPTH_MAPPING.md).
-Use `--depth-maps` instead of `--demo` for a stationary scene. The motion sample
+Use `--depth-maps` instead of `--mode replay` for a stationary scene. The motion sample
 is about 99 KiB and only animates poses; it does not drive hydraulic physics.
 
 ## Adding simulated sand
@@ -101,6 +104,32 @@ adding a dynamic surface alone cannot reveal excavated holes hidden by the
 original scan. Decide how to replace that region during integration. Also keep
 the registered ground reference consistent (`--ground-z`, currently -0.0245 m
 for the calibrated replay), instead of assuming the separate soil demo's origin.
+
+The gamepad viewer uses the external learned arm and slew forward models as
+free-space dynamics, integrating at 100 Hz on a CPU worker and applying snapshots
+to USD before camera capture. It does not run PhysX. The released arm model's
+carriage pitch is applied after bearing yaw, with the rocking asset's +/-3 degree
+limit. All model channels and the 10 ms training timestep are checked at load.
+Model source, weights and licenses stay in the actuator checkout.
+
+Run `python tools/benchmark_gamepad.py` in the Isaac Lab environment to check
+60/10/2 Hz input polling against the real models. Add `--render --headless --frames 80
+--depth-out logs/gamepad/compact` to measure actual RTX load, `--show-viewport`
+for a full viewport comparison, or `--frame-delay 0.5` to inject a slow render thread.
+The report separates inference, scheduling lateness, dropped wall time, velocity
+clipping and render-loop timing. It measures timing and numerical health, not
+model accuracy against real-machine trajectories.
+
+On 2026-11-27, the RTX 2000 Ada Laptop / i7-13700H run held 99.95 Hz
+control while synthetic gamepad motion and compact IR/depth/maps produced 2.28
+map updates/s. Enabling the full viewport gave 2.17 updates/s and 99.93 Hz
+control. The idle GUI reached roughly 4 map updates/s with 99.97 Hz control.
+All three runs reported zero dropped control time, zero velocity clipping and
+no non-finite predictions. These short runs show timing feasibility, not a
+guarantee of smooth display or real-time scheduling: the idle GUI had a 125 ms
+p95 scheduling delay followed by fixed-step catch-up. Artifacts are under
+`logs/gamepad/{compact,full-viewport,gui}/` on this machine. Input is still polled
+by Kit's render loop; it is not an independent 20 Hz input stream.
 
 The ROS viewer currently reads paused USD/kinematic replay poses and rejects a
 playing physics timeline. Dynamics integration needs synchronized physics/USD

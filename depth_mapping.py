@@ -155,6 +155,7 @@ class DepthMapping:
         panel: bool = True,
         session: int = 0,
         *,
+        ir_width: int | None = None,
         robot_repo: Path | None = None,
         fastdem: Path | None = None,
         mapping: str = "robot",
@@ -186,6 +187,11 @@ class DepthMapping:
             self.robot_policy = None
             self.mapper = TerrainMapper(self.profile)
         self.products = {}
+        self.ir_views = None
+        if ir_width is not None:
+            from ir_views import IRViews
+
+            self.ir_views = IRViews(stage, ir_width)
         self.last = None
         self.started = time.monotonic()
         self.status = None
@@ -255,13 +261,18 @@ class DepthMapping:
     def _create_panel(self) -> None:
         import omni.ui as ui
 
-        self.window = ui.Window("D435i depth and terrain maps", width=690, height=700)
+        self.window = ui.Window(
+            "Excavator cameras and terrain" if self.ir_views else "D435i depth and terrain maps",
+            width=510 if self.ir_views else 690,
+            height=650 if self.ir_views else 700,
+        )
         with self.window.frame, ui.VStack(spacing=6):
-            ui.Label(f"D435i | {self.backend} mapper | red = robot mask | black = unknown", height=24)
-            with ui.HStack(height=230):
+            ui.Label(f"D435i | {self.backend} mapper | black map cells = unknown", height=24)
+            with ui.HStack(height=200 if self.ir_views else 230):
                 for name in STREAMS:
                     with ui.VStack():
-                        ui.Label(f"{name} optical depth (0.1-0.9 m)", height=22)
+                        label = "Cabin" if name == "cabin" else "Boom"
+                        ui.Label(f"{label} IR" if self.ir_views else f"{name} optical depth (0.1-0.9 m)", height=22)
                         provider = ui.ByteImageProvider()
                         self.providers[name] = provider
                         ui.ImageWithProvider(provider)
@@ -273,6 +284,7 @@ class DepthMapping:
                         self.providers[name] = provider
                         ui.ImageWithProvider(provider)
             self.status = ui.Label("Waiting for depth...", height=36, word_wrap=True)
+            self.control_status = ui.Label("", height=42, word_wrap=True)
             with ui.HStack(height=26):
                 ui.Button("Save current depth + maps", clicked_fn=self.save)
                 ui.Button("Clear accumulated map", clicked_fn=self.clear)
@@ -306,7 +318,8 @@ class DepthMapping:
         # Wait for both depth and instance buffers; keep a bound on failed renderer startup.
         deadline = now + 30
         buffers = {}
-        while len(buffers) != len(self.products):
+        ir_ready = self.ir_views is None
+        while len(buffers) != len(self.products) or not ir_ready:
             render_start = time.perf_counter()
             rep.orchestrator.step(rt_subframes=4 if not self.warmed_up else 1, delta_time=0.0, pause_timeline=False)
             render_ms += (time.perf_counter() - render_start) * 1000
@@ -325,8 +338,9 @@ class DepthMapping:
                     )
                 ):
                     buffers[name] = (image, labels)
-            if len(buffers) != len(self.products) and time.monotonic() >= deadline:
-                raise TimeoutError("D435i depth and instance buffers were not ready within 30 seconds")
+            ir_ready = self.ir_views is None or self.ir_views.read()
+            if (len(buffers) != len(self.products) or not ir_ready) and time.monotonic() >= deadline:
+                raise TimeoutError("Camera buffers were not ready within 30 seconds")
         captures = {}
         for name, (camera, _, _, _) in self.products.items():
             sensor = self.profile["sensors"][name]
@@ -352,6 +366,9 @@ class DepthMapping:
             if self_mask is not None:
                 captures[name]["robot_mask"] = self_mask.copy()
         self.warmed_up = True
+        if self.ir_views is not None and self.providers:
+            for name, gray in self.ir_views.images.items():
+                self._image(name, gray)
         self.capture_timings = {"render_ms": render_ms, "readback_ms": (time.monotonic() - now) * 1000 - render_ms}
         return captures
 
@@ -382,7 +399,7 @@ class DepthMapping:
             arrays[f"depth_{name}_z16"] = z16
             arrays[f"optical_to_world_{name}"] = pose
             diagnostics[name] = {"points_in_range": len(points), "self_hit_pixels": int(self_mask.sum())}
-            if self.providers:
+            if self.providers and self.ir_views is None:
                 gray = np.rint(255 * np.clip((image - 0.1) / 0.8, 0, 1)).astype(np.uint8)
                 gray[(image <= 0) | (image > 0.9)] = 0
                 self._image(name, gray[::2, ::2])
@@ -467,7 +484,7 @@ class DepthMapping:
                 "points_in_range": len(scan[0]),
                 "self_rejected_pct": float(100 * np.count_nonzero(mask == 2) / max(1, np.count_nonzero(mask))),
             }
-            if self.providers:
+            if self.providers and self.ir_views is None:
                 preview_started = time.perf_counter()
                 gray = np.rint(255 * np.clip((0.9 - scan[3]) / 0.8, 0, 1)).astype(np.uint8)
                 gray[scan[3] <= 0] = 0
@@ -534,6 +551,10 @@ class DepthMapping:
         for name in STREAMS:
             if not cv2.imwrite(str(self.out / f"depth_{name}_z16.png"), self.latest[f"depth_{name}_z16"]):
                 raise OSError("Could not save depth PNG")
+        if self.ir_views is not None:
+            for name, gray in self.ir_views.images.items():
+                if not cv2.imwrite(str(self.out / f"ir_{name}.png"), gray):
+                    raise OSError("Could not save IR PNG")
         for name in ("front", "surround"):
             image = map_image(self.latest[f"{name}_mm"], self.profile["height_color_limit_m"])
             if not cv2.imwrite(str(self.out / f"{name}.png"), image):
@@ -558,6 +579,8 @@ class DepthMapping:
         logger.info("Saved D435i depth, world points and terrain maps to %s", self.out)
 
     def close(self) -> None:
+        if self.ir_views is not None:
+            self.ir_views.close()
         if self.robot_engine is not None:
             self.robot_engine.__exit__(None, None, None)
             self.robot_engine = None

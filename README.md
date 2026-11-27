@@ -47,17 +47,37 @@ uv run --no-sync python launch_3dgs.py --snapshot logs/3dgs/overview.png
 uv run --no-sync python launch_3dgs.py --headless --frames 120 --camera cabin --snapshot logs/3dgs/cabin.png
 ```
 
-Run the full scene with live D435i depth, terrain maps and a small looping motion demo:
+Run the camera/map demo with recorded motion, or drive it with a gamepad:
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --demo
+uv run --no-sync python launch_3dgs.py --mode replay
+uv run --no-sync python launch_3dgs.py --mode gamepad
+uv run --no-sync python launch_3dgs.py --mode gamepad --nodynamics
 ```
 
 This uses the checked-in [camera/filter profile](config/heightmaps/README.md) and
 [motion sample](assets/motions/README.md). No recorded dataset or files from
-`logs/` are needed. It shows full-resolution cabin/arm depth, a 64x64 front map
-and a 160x160 surrounding FastDEM map. Use `--depth-maps` instead of `--demo`
+`logs/` are needed. It shows cabin/boom IR views at 224x168 (the original 4:3 field
+of view), a 64x64 front map and a 160x160 surrounding FastDEM map. Viewport 1 is
+disabled; full 640x480 depth sensors still feed mapping in the background.
+Open `demo_env.usd` in Isaac Sim to inspect the full environment, or use
+`--show-viewport` for a performance comparison. `--ir-width` changes the IR render size.
+Use `--depth-maps` instead of `--mode replay`
 for a stationary scene, or `--replay PATH` for another saved motion.
+
+Gamepad mode loads the arm and slew MLPs from the sibling `Isaac-hydraulic-actuator`
+checkout; set `--actuator-repo PATH` or `HYDRAULIC_ACTUATOR_REPO` elsewhere. The
+arm model includes carriage pitch. Left stick X/Y controls slew/tilt, right stick
+Y/X controls lift/bucket, and B or keyboard R resets pose, model history and maps.
+`--nodynamics` uses direct joint speeds. Replay always reproduces saved poses exactly.
+
+The models run on a separate CPU worker with fixed 10 ms steps. Rendering cannot
+stretch their history timestep; long scheduling stalls are reported as dropped
+wall time. Motion is integrated into USD for free-space operation; contact and
+digging loads are not modeled. This gamepad path is currently non-ROS.
+Control rates, inference time, clipping and rendering timings are saved to
+`control_performance.json` under `--depth-out`. Rendering still limits visual
+feedback and gamepad polling, even when control maintains 100 Hz.
 
 The shared mapper still requires a `kaivuriprokkis` checkout (`--robot-repo PATH`
 or `KAIVURI_REPO`) and a locally built FastDEM adapter. See

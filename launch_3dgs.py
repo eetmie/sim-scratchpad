@@ -1,23 +1,26 @@
-"""Open the registered room scan in Isaac Sim, with physics paused."""
+"""Calibrated camera/map demo with pose replay or learned hydraulic gamepad motion."""
 
 import argparse
 import asyncio
 import bisect
+import json
 import logging
 import math
 import time
+from collections import deque
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(headless: bool):
+def create_app(headless: bool, *, sensor_only: bool = False):
     """Start Isaac Sim using the desktop application's versioned shader caches."""
     from isaacsim import SimulationApp
 
     return SimulationApp(
         {
             "headless": headless,
+            "disable_viewport_updates": sensor_only,
             "multi_gpu": False,
             "renderer": "RealTimePathTracing",
             "extra_args": [
@@ -112,24 +115,102 @@ def parse_arguments(argv: list[str] | None = None):
     configuration_arguments(parser)
     parser.add_argument("--depth-out", type=Path, default=Path("logs/depth_mapping"))
     parser.add_argument("--ground-z", type=float, help="Override the profile's ground reference in stage metres.")
-    motion = parser.add_mutually_exclusive_group()
-    motion.add_argument("--demo", action="store_true", help="Enable depth/maps and loop the bundled excavator motion.")
-    motion.add_argument(
-        "--replay", type=Path, help="Loop a saved replay.json without regenerating the offline comparison"
+    parser.add_argument(
+        "--mode", choices=("replay", "gamepad"), help="Camera/map demo: exact pose replay or gamepad valve control."
     )
+    parser.add_argument("--replay", type=Path, help="Replay file for --mode replay; defaults to bundled motion.")
+    parser.add_argument(
+        "--nodynamics", action="store_true", help="Gamepad: direct joint speeds instead of arm/slew MLPs."
+    )
+    parser.add_argument(
+        "--actuator-repo", type=Path, help="Isaac-hydraulic-actuator checkout (default: sibling checkout)."
+    )
+    parser.add_argument("--ir-width", type=int, default=224, help="Demo IR image width; aspect ratio is preserved.")
+    parser.add_argument("--show-viewport", action="store_true", help="Enable the full scene viewport for diagnostics.")
     mapping_arguments(parser)
     ros_arguments(parser)
     args = parser.parse_args(argv)
-    if args.demo:
+    if args.replay:
+        if args.mode == "gamepad":
+            parser.error("--replay cannot be used with --mode gamepad")
+        args.mode = "replay"
+    if args.mode:
         args.depth_maps = True
-        args.replay = DEMO_REPLAY
+    if args.mode == "replay":
+        args.replay = args.replay or DEMO_REPLAY
+    if args.mode == "gamepad" and args.ros:
+        parser.error("Gamepad mode is currently non-ROS; use --mode replay with --ros")
+    if args.nodynamics and args.mode != "gamepad":
+        parser.error("--nodynamics applies to --mode gamepad")
+    if args.ir_width < 16:
+        parser.error("--ir-width must be at least 16")
+    if args.mode and not args.ros and args.snapshot and not args.show_viewport:
+        parser.error("--snapshot captures the scene viewport; add --show-viewport, or use exported ir_*.png")
     validate_ros_arguments(parser, args)
     if args.frames < 0 or (args.headless and not args.frames):
         parser.error("--headless requires --frames > 0; --frames must not be negative")
     return args
 
 
-def main(argv: list[str] | None = None) -> None:
+def save_snapshot(app, viewport, path):
+    from omni.kit.viewport.utility import capture_viewport_to_file
+
+    path = path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    capture = capture_viewport_to_file(viewport, str(path))
+    pending = asyncio.ensure_future(capture.wait_for_result(completion_frames=30))
+    deadline = time.monotonic() + 60
+    while (not pending.done() or not path.is_file()) and app.is_running() and time.monotonic() < deadline:
+        app.update()
+    if not pending.done():
+        pending.cancel()
+        raise TimeoutError("Viewport capture did not finish within 60 seconds")
+    pending.result()
+    if not path.is_file():
+        raise RuntimeError(f"Viewport capture did not write {path}")
+    logger.info("Saved viewport to %s", path)
+
+
+def create_motion(args, stage, command_source):
+    from hydraulic_motion import Gamepad, HydraulicMotion, MotionWorker, SceneJoints
+
+    joints = SceneJoints(stage)
+    motion = HydraulicMotion(joints.initial, joints.limits, dynamics=not args.nodynamics, repo=args.actuator_repo)
+    worker = MotionWorker(motion)
+    joints.apply(motion.position)
+    if command_source is None:
+        if args.headless:
+
+            def command_source():
+                return [0.0] * 4, False
+        else:
+            gamepad = Gamepad()
+            command_source = gamepad.read
+            logger.info("%s", gamepad.source.description)
+    logger.info("Gamepad: left X slew, left Y tilt, right Y lift, right X bucket; B/R resets.")
+    logger.info("Dynamics: %s; fixed 100 Hz CPU control", "direct speeds" if args.nodynamics else "arm + slew MLP")
+    return joints, worker, command_source
+
+
+def configure_display(args, stage, sensor_only):
+    from omni.kit.viewport.utility import get_active_viewport
+    from omni.kit.viewport.window import get_viewport_window_instances
+
+    viewport = get_active_viewport()
+    if viewport is None and not sensor_only:
+        raise RuntimeError("Isaac Sim did not create a viewport")
+    if sensor_only:
+        for window in get_viewport_window_instances():
+            window.viewport_api.updates_enabled = False
+            window.visible = False
+    if viewport is not None and args.camera != "perspective":
+        from camera_calibration.usd_cameras import cameras
+
+        viewport.camera_path = cameras(stage)[args.camera].GetPath()
+    return viewport
+
+
+def main(argv: list[str] | None = None, *, command_source=None) -> None:
     from robot_mapping import fastdem_binary, robot_checkout
     from scene_motion import apply_transforms, load_replay
 
@@ -155,13 +236,16 @@ def main(argv: list[str] | None = None) -> None:
         if asset.read(4) != b"PK\x03\x04":
             raise ValueError("Room scan is not a USDZ archive. Fetch it with git lfs pull.")
 
-    app = create_app(args.headless)
+    sensor_only = bool(args.mode and not args.ros and not args.show_viewport)
+    app = create_app(args.headless, sensor_only=sensor_only)
     depth_mapping = None
     ros_bridge = ros_scene = ros_clock = None
+    worker = None
+    frame_ms = deque(maxlen=10000)
+    report_due = 0
     exit_code = 0
     try:
         import omni.usd
-        from omni.kit.viewport.utility import capture_viewport_to_file, get_active_viewport
 
         context = omni.usd.get_context()
         if not context.open_stage(str(stage_path)):
@@ -173,13 +257,7 @@ def main(argv: list[str] | None = None) -> None:
             raise RuntimeError("The room's Gaussian splat payload did not load")
         app.reset_render_settings()
         app.update()
-        viewport = get_active_viewport()
-        if viewport is None:
-            raise RuntimeError("Isaac Sim did not create a viewport")
-        if args.camera != "perspective":
-            from camera_calibration.usd_cameras import cameras
-
-            viewport.camera_path = cameras(stage)[args.camera].GetPath()
+        viewport = configure_display(args, stage, sensor_only)
 
         if args.depth_maps:
             from depth_mapping import DepthMapping
@@ -190,6 +268,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.depth_out,
                 args.ground_z,
                 panel=not args.headless,
+                ir_width=args.ir_width if args.mode and not args.ros else None,
                 robot_repo=args.robot_repo,
                 fastdem=args.fastdem,
                 mapping=args.mapping,
@@ -197,14 +276,30 @@ def main(argv: list[str] | None = None) -> None:
             )
             logger.info("D435i depth and terrain maps enabled; save directory: %s", args.depth_out.resolve())
 
+        if args.mode == "gamepad":
+            joints, worker, command_source = create_motion(args, stage, command_source)
+
         ros_bridge, ros_scene, ros_clock = start_ros(args, stage, depth_mapping, replay, app)
 
         logger.info("Opened %s; Gaussian splats: %s", stage_path, [str(prim.GetPath()) for prim in splats])
-        logger.info("Camera: %s. Physics is paused; close the Isaac Sim window to exit.", viewport.camera_path)
+        logger.info(
+            "Display: %s. Close the Isaac Sim window to exit.",
+            "cabin/boom IR + terrain maps; viewport disabled" if sensor_only else str(viewport.camera_path),
+        )
         frame = 0
         ros_sample = 0
         replay_started, previous_loop, replay_ops = time.monotonic(), 0, {}
         while app.is_running() and (not args.frames or frame < args.frames):
+            frame_started = time.perf_counter()
+            if worker is not None:
+                import omni.timeline
+
+                if omni.timeline.get_timeline_interface().is_playing():
+                    raise RuntimeError("Gamepad motion owns USD poses; keep the physics timeline paused")
+                command, reset = command_source()
+                joints.apply(worker.sample(command, reset))
+                if reset:
+                    depth_mapping.clear()
             if ros_bridge is not None:
                 import omni.timeline
 
@@ -242,26 +337,24 @@ def main(argv: list[str] | None = None) -> None:
                     source_ns=replay[index]["timestamp_ns"] if replay else None,
                 )
                 ros_sample += 1
+            if worker is not None and worker.started is None:
+                # Exclude shader/camera initialization from the live control timing.
+                worker.start()
+            frame_ms.append((time.perf_counter() - frame_started) * 1000)
+            if worker is not None and time.monotonic() >= report_due:
+                report = worker.report()
+                inference = report["inference_ms"].get("p95", 0)
+                status = (
+                    f"Control {report['achieved_hz']:.1f} Hz | MLP p95 {inference:.2f} ms | "
+                    f"render loop {1000 / (sum(frame_ms) / len(frame_ms)):.1f} Hz | "
+                    f"dropped {report['dropped_wall_s']:.3f} s | clips {report['velocity_clip_steps']}"
+                )
+                logger.info(status)
+                if depth_mapping.window:
+                    depth_mapping.control_status.text = status + "\nB / R: reset"
+                report_due = time.monotonic() + 5
             if args.snapshot and frame == min(args.frames or 120, 120):
-                args.snapshot = args.snapshot.resolve()
-                args.snapshot.parent.mkdir(parents=True, exist_ok=True)
-                capture = capture_viewport_to_file(viewport, str(args.snapshot))
-                pending = asyncio.ensure_future(capture.wait_for_result(completion_frames=30))
-                deadline = time.monotonic() + 60
-                # Kit schedules the PNG write separately from the capture future.
-                while (
-                    (not pending.done() or not args.snapshot.is_file())
-                    and app.is_running()
-                    and time.monotonic() < deadline
-                ):
-                    app.update()
-                if not pending.done():
-                    pending.cancel()
-                    raise TimeoutError("Viewport capture did not finish within 60 seconds")
-                pending.result()
-                if not args.snapshot.is_file():
-                    raise RuntimeError(f"Viewport capture did not write {args.snapshot}")
-                logger.info("Saved viewport to %s", args.snapshot)
+                save_snapshot(app, viewport, args.snapshot)
         if depth_mapping is not None:
             depth_mapping.save()
             logger.info("Saved D435i depth and terrain maps to %s", args.depth_out.resolve())
@@ -271,18 +364,34 @@ def main(argv: list[str] | None = None) -> None:
         raise
     finally:
         try:
-            try:
-                if ros_scene is not None:
-                    ros_scene.close()
-            finally:
-                try:
-                    if ros_bridge is not None:
-                        ros_bridge.close()
-                finally:
-                    if depth_mapping is not None:
-                        depth_mapping.close()
+            if worker is not None:
+                worker.close()
+                from hydraulic_motion import percentiles
+
+                report = worker.report()
+                report.update(
+                    render_loop_ms=percentiles(frame_ms),
+                    dynamics=not args.nodynamics,
+                    viewport_enabled=not sensor_only,
+                    ir_width=args.ir_width,
+                )
+                args.depth_out.mkdir(parents=True, exist_ok=True)
+                (args.depth_out / "control_performance.json").write_text(json.dumps(report, indent=2) + "\n")
+                logger.info("Control timing: %s", json.dumps(report))
         finally:
-            app.close(exit_code=exit_code)
+            try:
+                try:
+                    if ros_scene is not None:
+                        ros_scene.close()
+                finally:
+                    try:
+                        if ros_bridge is not None:
+                            ros_bridge.close()
+                    finally:
+                        if depth_mapping is not None:
+                            depth_mapping.close()
+            finally:
+                app.close(exit_code=exit_code)
 
 
 if __name__ == "__main__":

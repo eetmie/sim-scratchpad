@@ -22,9 +22,9 @@ CONTROLLER_MAPPINGS = (
 )
 
 
-def apply_deadzone(value):
+def apply_deadzone(value, threshold=DEADZONE):
     """Zero small stick noise, then rescale so the output still spans -1..1."""
-    magnitude = (abs(value) - DEADZONE) / (1.0 - DEADZONE)
+    magnitude = (abs(value) - threshold) / (1.0 - threshold)
     return 0.0 if magnitude <= 0.0 else math.copysign(min(magnitude, 1.0), value)
 
 

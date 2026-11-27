@@ -27,7 +27,7 @@ In a **clean simulator terminal**, without `/opt/ros/*` sourced:
 
 ```bash
 export ROS_DOMAIN_ID=42
-bash ros2/run_latest.sh --demo --robot-repo "$KAIVURI_REPO"
+bash ros2/run_latest.sh --mode replay --robot-repo "$KAIVURI_REPO"
 ```
 
 `run_latest.sh` selects Isaac's bundled Jazzy and Fast DDS using the existing `ros_env.sh`.
@@ -36,7 +36,7 @@ path is `.cache/fastdem/build/fastdem_replay`, with a fallback to the existing
 `logs/fastdem/build/fastdem_replay`; override with `--fastdem PATH`.
 The launcher enables `isaacsim.ros2.bridge` before importing `rclpy`.
 
-`--demo` loops the bundled pose sequence using its relative timestamps; omit it
+`--mode replay` loops the bundled pose sequence using its relative timestamps; omit it
 for the stationary scene. Both use `config/heightmaps/` by default. `--config PATH`
 selects another profile. To use recorded dataset calibration and a saved plan, add
 `--dataset PATH` and

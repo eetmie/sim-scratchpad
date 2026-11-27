@@ -1,9 +1,9 @@
 # Small excavator motion demo
 
 `excavator_demo.json` contains 110 poses over about 22 seconds, at the original
-approximately 5 Hz exposure cadence. Run `launch_3dgs.py --demo` to loop it with
+approximately 5 Hz exposure cadence. Run `launch_3dgs.py --mode replay` to loop it with
 live rendered depth and heightmaps. `--replay assets/motions/excavator_demo.json`
-can also play just the motion without enabling maps.
+selects this same camera/map replay explicitly.
 
 It is a compact copy of the validated episode-002 cabin-pose timeline, frames
 12 through 666 at stride 6. Only relative timestamps and five link transforms

@@ -17,10 +17,10 @@ REPO = Path(os.environ.get("KAIVURI_REPO", Path.home() / "Documents/GitHub/kaivu
 
 def test_demo_and_static_viewer_default_to_bundled_configuration(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    for options in (["--demo"], ["--depth-maps"], ["--ros", "--demo"]):
+    for options in (["--mode", "replay"], ["--depth-maps"], ["--ros", "--mode", "replay"]):
         args = parse_arguments(options)
         assert args.dataset is None and args.config is None and args.depth_maps
-        assert args.replay == (DEMO_REPLAY if args.demo else None)
+        assert args.replay == (DEMO_REPLAY if args.mode == "replay" else None)
     profile = load_profile()
     assert Path(profile["configuration_source"]) == DEFAULT_CONFIG / "heightmaps.json"
     assert profile["ground_z_stage_m"] == -0.0245
@@ -34,7 +34,7 @@ def test_demo_and_static_viewer_default_to_bundled_configuration(monkeypatch, tm
     with pytest.raises(SystemExit):
         parse_arguments(["--config", "profile", "--dataset", "recording"])
     with pytest.raises(SystemExit):
-        parse_arguments(["--demo", "--replay", "motion.json"])
+        parse_arguments(["--mode", "gamepad", "--replay", "motion.json"])
 
 
 def test_explicit_dataset_session_remains_supported_without_falling_back(tmp_path):

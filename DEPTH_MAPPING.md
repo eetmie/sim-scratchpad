@@ -5,14 +5,19 @@ terrain maps with the checked-in camera/filter profile. Run from this checkout
 using Isaac Lab's existing environment:
 
 ```powershell
-uv run --no-sync python launch_3dgs.py --demo
+uv run --no-sync python launch_3dgs.py --mode replay
 ```
 
-The **D435i depth and terrain maps** window shows both depth images, the front
-map and the accumulated surrounding map. **The default is now the real robot's
+The demo's **Excavator cameras and terrain** window shows 224x168 cabin/boom IR,
+the front map and the accumulated surrounding map, with Viewport 1 disabled.
+Raw depth is hidden; it remains 640x480 for mapping. `--mode gamepad` enables
+arm/slew MLP valve control; `--nodynamics` bypasses the models. See the main README
+for controls and control-timing reports. The stationary `--depth-maps` diagnostic
+still shows depth previews. **The default is the real robot's
 masking, cabin-first fusion and FastDEM**, shared with the offline comparison
 through `robot_mapping.py`. Capture uses full 640x480 images; the robot's stride-4
-projection produces 160x120 depth/mask previews. Red marks self-filtered pixels.
+projection produces 160x120 depth/mask previews in the stationary diagnostic.
+Red marks self-filtered pixels there.
 The maps target the simulator profile's 5 Hz, subject to GPU and capture time.
 The sensors follow the live USD link transforms. Physics
 starts paused; rendering depth preserves the current playback state. Moving the
@@ -23,7 +28,7 @@ accumulated map** to restart coverage. Closing the viewer also saves the final
 capture. All outputs default to `logs/depth_mapping/`; use `--depth-out` to change
 that location. Camera and render-product changes are authored in the session
 layer. No dataset is needed for this viewer; settings live in
-[`config/heightmaps/`](config/heightmaps/README.md). `--demo` enables depth/maps
+[`config/heightmaps/`](config/heightmaps/README.md). `--mode replay` enables depth/maps
 and the bundled approximately 22-second motion. `--depth-maps` alone opens the
 stationary scene. `--config PATH` selects another simulator profile.
 
