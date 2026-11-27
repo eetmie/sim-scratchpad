@@ -236,11 +236,38 @@ Turning off `publish_map_cloud` through ROS delivered zero clouds while 16 maps
 and 91 boom IR frames arrived. Re-enabling it delivered 16 clouds with 16 matching
 map stamps. Unchecking the terrain display in the running RViz dropped the cloud
 subscriber count to zero while the map kept updating. Checking it restored the subscription.
+Clicking **Terrain → Clear terrain** during a drive dropped 1,229 previously known
+cells. The next cloud contained 3,991 cells, all age zero. Seven depth updates later
+the rebuilt map contained 6,791 cells.
 In a final 25-second check after restoring the display, the receiver saw 749 pairs
 of IR frames (29.95 Hz per camera) and 124 sets of front map, surround map and cloud
 (5.00 Hz each). Every set matched an IR exposure and TF by stamp. Recorded motion
 advanced at 0.999× wall speed. Raw depth stayed local throughout.
 [RViz and ROS controls](ros2/LATEST.md#topics-and-numeric-conventions)
+
+### Headless ROS gamepad on the RTX 5070 laptop
+
+With local RViz open, an external ROS node sent SDL-layout `Joy` messages through the
+operator mapper to a remapped command topic. Eight one-axis pulses moved slew, lift,
+tilt and scoop in both directions in `/joint_states`. Each command reached the
+hydraulic worker 0.7–9.0 ms after the simulator's receive callback.
+
+Over a 25-second receiver window, both IR cameras delivered 29.39 Hz and both maps
+and the terrain cloud delivered 5.00 Hz. All 735 IR pairs and 125 map/cloud sets
+matched their acquisition stamps. The hydraulic worker ran at 99.97 Hz with zero
+dropped control time. This run included per-tick instrumentation and static terrain.
+
+In the live demo, the 8BitDo Ultimate 2C Wireless drove all four valves in both
+directions through the default topics at 50.00 commands/s. A separate 25-second
+receiver window during that drive measured 29.36 Hz per IR camera and 5.00 Hz for
+each heightmap and the cloud. All 125 map sets matched an IR exposure and TF.
+
+Stopping the command publisher while holding slew applied neutral at the hydraulic
+worker 159 ms after the last valid command. Sending malformed commands also expired
+the demand at 159 ms. The 150 ms watchdog is checked at each 10 ms hydraulic tick,
+independently of rendering and mapping. Losing the upstream joystick stream while
+the mapper continued running produced neutral after about half a second.
+[Launch commands and ROS interfaces](ros2/LATEST.md#headless-gamepad-teleop)
 
 ## Adding simulated sand
 

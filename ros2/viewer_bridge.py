@@ -6,14 +6,17 @@ Only standard ROS messages are required, including the FastDEM map's PointCloud2
 
 import json
 import math
+import threading
+import time
 
 import numpy as np
 from ros2.map_contract import FRONT_FRAME, SURROUND_FRAME, depth_millimetres, grid_points, height_image, height_metres
+from ros2.sensors import COMMAND_SIGN, COMMAND_TIMEOUT_S, COMMAND_TOPIC
 from scipy.spatial.transform import Rotation
 
 
 class ViewerRosBridge:
-    def __init__(self, profile, *, clock_mode, cameras=False, depth=False, cloud_hz=None):
+    def __init__(self, profile, *, clock_mode, cameras=False, depth=False, cloud_hz=None, ros_args=()):
         # Import only after the launcher's ROS environment/Isaac bridge is ready.
         import rclpy
         from builtin_interfaces.msg import Time
@@ -25,6 +28,7 @@ class ViewerRosBridge:
         from rosgraph_msgs.msg import Clock
         from sensor_msgs.msg import CameraInfo, Image, JointState, PointCloud2, PointField, TimeReference
         from std_msgs.msg import Header, String
+        from std_srvs.srv import Trigger
         from tf2_ros import TransformBroadcaster
 
         if cloud_hz is not None and (not math.isfinite(cloud_hz) or cloud_hz < 0):
@@ -44,10 +48,13 @@ class ViewerRosBridge:
             String=String,
         )
         self.context = Context()
-        rclpy.init(args=[], context=self.context, signal_handler_options=SignalHandlerOptions.NO)
+        rclpy.init(args=list(ros_args), context=self.context, signal_handler_options=SignalHandlerOptions.NO)
         self.node = rclpy.create_node("isaac_terrain", context=self.context)
         self.executor = SingleThreadedExecutor(context=self.context)
         self.executor.add_node(self.node)
+        self.spin_thread = None
+        self.map_reset_requested = threading.Event()
+        self.node.create_service(Trigger, "/fastdem/reset_map", self.request_map_reset)
         self.tf = TransformBroadcaster(self.node)
         self.publishers = {}
         self.last_cloud_ns = None
@@ -125,7 +132,36 @@ class ViewerRosBridge:
         self.publishers["clock"].publish(self.types["Clock"](clock=self.time(stamp_ns)))
 
     def spin(self):
-        self.executor.spin_once(timeout_sec=0)
+        if self.spin_thread is None:
+            self.executor.spin_once(timeout_sec=0)
+
+    def request_map_reset(self, _request, response):
+        # DepthMapping.clear() drains the mapping worker and must run on the main thread.
+        self.map_reset_requested.set()
+        response.success = True
+        response.message = "Terrain reset queued for the next depth update."
+        return response
+
+    def start_teleop(self):
+        from rclpy.qos import QoSProfile, ReliabilityPolicy
+        from std_msgs.msg import Float32MultiArray
+
+        self.received_valves = (-math.inf, (0.0,) * 4)
+        qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+        self.node.create_subscription(Float32MultiArray, COMMAND_TOPIC, self.receive_valves, qos)
+        self.spin_thread = threading.Thread(target=self.executor.spin, name="ros-teleop", daemon=True)
+        self.spin_thread.start()
+        return self.valves
+
+    def receive_valves(self, msg):
+        values = msg.data
+        if len(values) == 4 and all(math.isfinite(v) and abs(v) <= 1 for v in values):
+            # Replace stamp and payload together for the hydraulic worker.
+            self.received_valves = time.monotonic(), tuple(v * sign for v, sign in zip(values, COMMAND_SIGN))
+
+    def valves(self):
+        stamp, command = self.received_valves
+        return command if time.monotonic() - stamp < COMMAND_TIMEOUT_S else (0.0,) * 4
 
     def image(self, key, pixels, encoding, stamp_ns, frame):
         pixels = np.ascontiguousarray(pixels)
@@ -282,5 +318,7 @@ class ViewerRosBridge:
             self.event("end", self.episode, self.last_stamp_ns)
             self.publishers["episode"].wait_for_all_acked(Duration(seconds=0.5))
         self.executor.shutdown()
+        if self.spin_thread is not None:
+            self.spin_thread.join()
         self.node.destroy_node()
         self.context.try_shutdown()

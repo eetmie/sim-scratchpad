@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>excavator_rviz</name>
+  <version>0.1.0</version>
+  <description>RViz controls for the excavator terrain map.</description>
+  <maintainer email="noreply@example.com">excavator</maintainer>
+  <license>BSD-3-Clause</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rviz_common</depend>
+  <depend>std_srvs</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

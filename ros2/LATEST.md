@@ -6,8 +6,8 @@ Raw depth and grayscale cameras are opt-in; remote RViz needs only maps and TF.
 
 The transport uses `rclpy`, `tf2_ros` and standard ROS messages. `viewer_bridge.py` has no
 Isaac/USD imports; `viewer_scene.py` reads USD and optional calibrated grayscale buffers;
-`map_contract.py` contains ROS-free array/time conversions. No custom interfaces or ROS
-workspace build is required for this path. Isaac's bridge supplies its ROS runtime.
+`map_contract.py` contains ROS-free array/time conversions. Isaac's bridge supplies its
+ROS runtime. The operator's RViz terrain button is a small panel built on the RViz machine.
 
 ## Ubuntu setup and launch
 
@@ -67,11 +67,20 @@ bash ros2/run_latest.sh --dataset "$KAIVURI_DATASET" --robot-repo "$KAIVURI_REPO
   --replay logs/ros-replay/episode-002.json --ros-cameras
 ```
 
-On the RViz machine, keep another checkout including `assets/urdf/meshes`. Source that
-machine's ROS environment, then run from the scratchpad checkout:
+On the RViz machine, keep another checkout including `assets/urdf/meshes`. Build the
+terrain panel once from the scratchpad checkout with system ROS sourced:
 
 ```bash
 source /opt/ros/lyrical/setup.bash  # use your system ROS distribution here
+mkdir -p .cache/rviz
+(cd .cache/rviz && colcon build --base-paths ../../ros2/rviz_terrain_panel)
+```
+
+In the RViz terminal, source the panel overlay along with the system ROS environment:
+
+```bash
+source /opt/ros/lyrical/setup.bash  # use your system ROS distribution here
+source .cache/rviz/install/local_setup.bash
 export ROS_DOMAIN_ID=42
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export FASTDDS_BUILTIN_TRANSPORTS=LARGE_DATA
@@ -83,10 +92,55 @@ Install your distro's `rviz2`, `tf2_ros`, ROS Python messages, and Python NumPy 
 missing. Network discovery, firewall and matching DDS settings must be checked on Ubuntu.
 The description publisher runs beside RViz so mesh URIs refer to that machine's checkout.
 
+### Clear and redraw terrain in RViz
+
+Click **Terrain → Clear terrain**. Isaac drops the remembered FastDEM cells before
+integrating the next camera pair. The green cloud and surround image redraw at 5 Hz.
+Currently visible ground reappears on the first update. Sweep the arm to fill in
+other areas. The robot keeps its pose and the ROS clock keeps advancing.
+
+If you use a personal RViz layout, add the panel under **Panels → Add New Panel →
+excavator_rviz → Terrain** and save the layout. Pass `rviz_config:=/path/to/your.rviz`
+to `view_latest.launch.py` to open it. Other ROS clients can request the same reset with
+`ros2 service call /fastdem/reset_map std_srvs/srv/Trigger '{}'`.
+
 **Do not also run `view_excavator.launch.py`, `mapping.launch.py`, `heightmap_image.py`,
 or another `/clock` publisher for this source.** The viewer owns the complete TF tree and
 map outputs. The new launch does not start robot_state_publisher, the older camera TF,
 the older cabin-only estimator, or teleop.
+
+## Headless gamepad teleop
+
+Run these commands from the scratchpad checkout. Use the ROS domain and Fast DDS
+settings above on both machines. For two machines, enable discovery across the network.
+
+1. On the simulator, in a clean terminal, run `bash ros2/run_latest.sh --headless --mode gamepad --ros-cameras`.
+2. On the operator machine, plug in the controller and run `ros2 launch ./ros2/teleop.launch.py`
+   from a terminal with system ROS sourced. The ROS `joy` package provides the SDL game controller driver.
+3. In another operator terminal with the same ROS environment, run `ros2 launch ./ros2/view_latest.launch.py`.
+
+Left stick X controls slew, left Y controls tilt, right Y controls lift and right X controls scoop.
+Raw depth stays on the simulator. The operator can also run all three processes on one laptop.
+
+| Topic | Type | Contract |
+| --- | --- | --- |
+| `/joy` | `sensor_msgs/msg/Joy` | Standard driver output. SDL stick order is left X, left Y, right X, right Y. The launcher sets autorepeat to 20 Hz. |
+| `/excavator/command` | `std_msgs/msg/Float32MultiArray` | Shared excavator interface. Four finite valve demands in [−1, 1], ordered slew, lift, tilt, scoop. The mapper publishes at 50 Hz. |
+| `/joint_states` | `sensor_msgs/msg/JointState` | Feedback from the applied simulated pose, with joint names and positions in radians. |
+
+An operator with another joystick driver can publish `Joy` in the SDL layout. A policy or
+custom controller can publish the four valve demands directly with the joystick mapper stopped.
+The simulator's command subscriber uses volatile, best-effort QoS with keep-last depth 1 and
+accepts reliable publishers too. An incoming valid command refreshes a 150 ms monotonic
+timeout. The 100 Hz hydraulic worker checks it even when rendering stalls. Malformed
+commands do not refresh it. If joystick messages stop but the mapper is still running,
+the mapper starts sending neutral commands after 500 ms.
+
+For example, to use `/demo/valves`, add
+`--ros-args -r /excavator/command:=/demo/valves` at the end of the simulator command
+and `command_topic:=/demo/valves` to the teleop launch. The operator launch also accepts
+`joy_topic:=/demo/joy`. Inspect the endpoints with `ros2 topic info -v /excavator/command`.
+[ROS 2 joy driver and SDL axis layout](https://github.com/ros-drivers/joystick_drivers/tree/ros2/joy)
 
 ## Topics and numeric conventions
 
@@ -95,10 +149,9 @@ the older cabin-only estimator, or teleop.
 * Observations: `/excavator/heightmap` + `/image`, `/fastdem/mapping/{height,image,age}`,
   `/excavator/maps/metadata`, and optionally `/excavator/cameras/{cabin,arm}/{image_raw,camera_info}`.
 * Robot/RViz: `/joint_states`, `/tf` (plus `/tf_static` when used), and `/fastdem/mapping/cloud`.
-* Future policy/control: `/excavator/joint_angles` (`Float32MultiArray`, normalized
-  `[slew,lift,tilt,scoop]`), `/excavator/feedback_healthy` (`Bool`), and
-  `/excavator/command` (`Float32MultiArray`, same order, demands -1..1). The latest viewer
-  currently publishes `/joint_states`; normalized feedback and command handling still need wiring.
+* Headless gamepad control subscribes to `/excavator/command` and publishes `/joint_states`.
+  The real robot also exposes `/excavator/joint_angles` (normalized slew, lift, tilt, scoop)
+  and `/excavator/feedback_healthy` (`Bool`). These two feedback topics are pending in the viewer.
 
 Match message types, optical/map frames, ground-relative heights, image encodings, QoS and
 acquisition-time stamps too. Then `ROS_DOMAIN_ID` can select the source. Consumers use

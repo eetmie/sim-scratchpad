@@ -143,11 +143,16 @@ export ROS_DOMAIN_ID=42
 bash ros2/run_latest.sh --headless --mode replay --ros-cameras --ir-width 224 --ros-time wall
 ```
 
-In a second terminal, source your system ROS 2 installation and launch
-`ros2 launch ./ros2/view_latest.launch.py` on the same domain with Fast DDS.
-For gamepad input and the same RViz streams, run
-`bash ros2/run_latest.sh --mode gamepad --ros-cameras` with the controller
-connected to Kit. The replay streams until stopped. Add `--frames N` for a finite run.
+On the operator machine, build and source the [RViz terrain panel](ros2/LATEST.md#ubuntu-setup-and-launch),
+then launch `ros2 launch ./ros2/view_latest.launch.py` on the same domain with Fast DDS.
+Click **Terrain → Clear terrain** to redraw the green map from the current robot pose.
+To **drive headless Isaac from the RViz machine**, start the simulator with
+`bash ros2/run_latest.sh --headless --mode gamepad --ros-cameras`. Plug the
+controller into the RViz machine and run `ros2 launch ./ros2/teleop.launch.py`
+there in a second ROS terminal. The gamepad publishes `/joy`, the mapper sends
+`/excavator/command`, and the simulated joints report motion on `/joint_states`.
+[Headless teleop, stick layout and topic remapping](ros2/LATEST.md#headless-gamepad-teleop).
+The replay streams until stopped. Add `--frames N` for a finite run.
 [RViz terminal setup and ROS topics](ros2/LATEST.md#ubuntu-setup-and-launch).
 
 The excavator USD comes from

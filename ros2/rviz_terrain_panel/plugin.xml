@@ -1,0 +1,5 @@
+<library path="terrain_panel">
+  <class name="excavator_rviz/Terrain" type="excavator_rviz::TerrainPanel" base_class_type="rviz_common::Panel">
+    <description>Clear the accumulated FastDEM terrain from the operator station.</description>
+  </class>
+</library>

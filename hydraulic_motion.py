@@ -119,8 +119,9 @@ class HydraulicMotion:
 class MotionWorker:
     """100 Hz worker with bounded catch-up; a render stall never changes model dt."""
 
-    def __init__(self, motion):
+    def __init__(self, motion, *, valve_source=None):
         self.motion = motion
+        self.valve_source = valve_source
         self.lock, self.stop = threading.Lock(), threading.Event()
         self.command = np.zeros(4)
         self.position = motion.position.copy()
@@ -159,7 +160,8 @@ class MotionWorker:
                 if reset:
                     self.motion.reset()
                     due = now
-                position = self.motion.step(command)
+                # Check network command freshness on every control tick, even during a render stall.
+                position = self.motion.step(self.valve_source() if self.valve_source is not None else command)
                 with self.lock:
                     self.position = position
                 due += DT
@@ -168,11 +170,12 @@ class MotionWorker:
         finally:
             self.finished = time.perf_counter()
 
-    def sample(self, command, reset=False):
+    def sample(self, command=None, reset=False):
         if self.error is not None:
             raise RuntimeError("Hydraulic control worker failed") from self.error
         with self.lock:
-            self.command = np.asarray(command, dtype=np.float32).copy()
+            if command is not None:
+                self.command = np.asarray(command, dtype=np.float32).copy()
             self.reset_pending |= reset
             return self.motion.initial.copy() if self.reset_pending else self.position.copy()
 

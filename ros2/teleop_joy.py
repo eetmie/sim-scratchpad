@@ -9,11 +9,14 @@ Streams at 50 Hz, zeros when the sticks are centred or the pad is gone, so the 1
 trips when this node dies. On the robot, pump permission stays with the robot's own pad.
 """
 
+import math
 import os
 import sys
 
 import rclpy
+from rclpy.clock import Clock, ClockType
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Joy
 from std_msgs.msg import Float32MultiArray
 
@@ -35,19 +38,25 @@ class TeleopJoy(Node):
     def __init__(self):
         super().__init__("teleop_joy")
         self.deadzone = self.declare_parameter("deadzone", 0.2).value
+        if not 0 <= self.deadzone < 1:
+            raise ValueError("deadzone must be in [0, 1)")
+        self.steady = Clock(clock_type=ClockType.STEADY_TIME)
         self.axes, self.stamp = None, None
         self.pub = self.create_publisher(Float32MultiArray, sensors.COMMAND_TOPIC, 1)
-        self.create_subscription(Joy, "joy", self.on_joy, 1)
-        self.create_timer(0.02, self.publish)
+        self.create_subscription(
+            Joy, "joy", self.on_joy, QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+        )
+        self.create_timer(0.02, self.publish, clock=self.steady)
 
     def on_joy(self, msg):
-        self.axes, self.stamp = msg.axes, self.get_clock().now()
+        self.axes = msg.axes
+        self.stamp = self.steady.now() if len(msg.axes) >= 4 and all(math.isfinite(v) for v in msg.axes[:4]) else None
 
     def publish(self):
         command = [0.0] * len(STICKS)
-        fresh = self.stamp is not None and (self.get_clock().now() - self.stamp).nanoseconds < 0.5e9
+        fresh = self.stamp is not None and (self.steady.now() - self.stamp).nanoseconds < 0.5e9
         if fresh:  # joy republishes on change only; game_controller_node's autorepeat keeps it fresh
-            command = [deadzone(self.axes[i], self.deadzone) * k if i < len(self.axes) else 0.0 for i, k in STICKS]
+            command = [deadzone(self.axes[i], self.deadzone) * k for i, k in STICKS]
         self.pub.publish(Float32MultiArray(data=command))
 
 

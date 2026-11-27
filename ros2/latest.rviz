@@ -1,6 +1,8 @@
 Panels:
   - Class: rviz_common/Displays
     Name: Displays
+  - Class: excavator_rviz/Terrain
+    Name: Terrain
 Visualization Manager:
   Class: ""
   Global Options:

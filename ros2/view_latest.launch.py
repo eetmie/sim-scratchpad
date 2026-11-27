@@ -21,6 +21,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             DeclareLaunchArgument("use_sim_time", default_value="true"),
+            DeclareLaunchArgument("rviz_config", default_value=os.path.join(HERE, "latest.rviz")),
             Node(
                 executable=sys.executable,
                 arguments=[os.path.join(HERE, "robot_description.py")],
@@ -32,7 +33,7 @@ def generate_launch_description():
                 package="rviz2",
                 executable="rviz2",
                 name="rviz2",
-                arguments=["-d", os.path.join(HERE, "latest.rviz")],
+                arguments=["-d", LaunchConfiguration("rviz_config")],
                 parameters=[sim_time],
                 output="screen",
             ),

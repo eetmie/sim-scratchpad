@@ -20,6 +20,8 @@ def test_gamepad_cli_and_replay_are_separate():
     assert parse_arguments(["--replay", "custom.json"]).mode == "replay"
     live = parse_arguments(["--mode", "gamepad", "--ros", "--ros-cameras"])
     assert (live.ros_time, live.ir_width) == ("wall", 224)
+    remap = ["-r", "/excavator/command:=/test/command"]
+    assert parse_arguments(["--headless", "--mode", "gamepad", "--ros", "--ros-args", *remap]).ros_args == remap
     for argv in (["--nodynamics"], ["--ir-width", "0"]):
         with pytest.raises(SystemExit):
             parse_arguments(argv)
@@ -115,3 +117,38 @@ def test_worker_reports_model_failure():
     with pytest.raises(RuntimeError, match="worker failed"):
         worker.sample(np.zeros(4))
     assert worker.report()["error"]
+
+
+def test_ros_valves_validate_direction_and_expire_on_the_control_thread(monkeypatch):
+    from types import SimpleNamespace
+
+    from ros2 import viewer_bridge
+    from ros2.sensors import COMMAND_TIMEOUT_S
+
+    bridge = viewer_bridge.ViewerRosBridge.__new__(viewer_bridge.ViewerRosBridge)
+    clock = [1.0]
+    monkeypatch.setattr(viewer_bridge, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    bridge.receive_valves(SimpleNamespace(data=[0.5, 0.4, -0.3, -0.2]))
+    assert bridge.valves() == (0.5, -0.4, 0.3, -0.2)
+    clock[0] += COMMAND_TIMEOUT_S / 2
+    for bad in ([0.0] * 3, [float("nan")] * 4, [1.1] * 4):
+        bridge.receive_valves(SimpleNamespace(data=bad))
+    assert bridge.valves() == (0.5, -0.4, 0.3, -0.2)
+
+    motion = HydraulicMotion(np.zeros(5), np.array([[-10, 10]] * 5), dynamics=False)
+    worker = MotionWorker(motion, valve_source=bridge.valves)
+    worker.start()
+    try:
+        deadline = time.monotonic() + 2
+        while not worker.sample()[0] and time.monotonic() < deadline:
+            time.sleep(DT)
+        assert worker.sample()[0] > 0
+        clock[0] += COMMAND_TIMEOUT_S
+        assert bridge.valves() == (0.0,) * 4
+        steps = motion.steps
+        while motion.steps < steps + 3 and time.monotonic() < deadline:
+            time.sleep(DT)
+        assert motion.steps >= steps + 3
+        np.testing.assert_array_equal(motion.velocity, 0)
+    finally:
+        worker.close()

@@ -65,6 +65,9 @@ def ros_arguments(parser):
         help="auto: preserve replay exposure times, otherwise fixed map cadence; wall: live host cadence.",
     )
     parser.add_argument("--ros-start-delay", type=float, default=3.0, help="ROS discovery grace period before capture.")
+    parser.add_argument(
+        "--ros-args", nargs=argparse.REMAINDER, help="Trailing ROS 2 arguments, including topic remaps."
+    )
 
 
 def validate_ros_arguments(parser, args):
@@ -72,8 +75,8 @@ def validate_ros_arguments(parser, args):
         args.depth_maps = True
         if args.mapping != "robot":
             parser.error("--ros requires the robot mapping backend (FastDEM)")
-    elif args.ros_cameras or args.ros_depth or args.ros_time != "auto" or args.uncapped:
-        parser.error("--ros-cameras, --ros-depth, --ros-time and --uncapped require --ros")
+    elif args.ros_cameras or args.ros_depth or args.ros_time != "auto" or args.uncapped or args.ros_args is not None:
+        parser.error("--ros-cameras, --ros-depth, --ros-time, --ros-args and --uncapped require --ros")
     if any(not math.isfinite(v) or v < 0 for v in (args.ros_start_delay, args.ros_cloud_hz) if v is not None):
         parser.error("ROS cloud frequency and discovery delay must be finite and nonnegative")
 
@@ -101,6 +104,7 @@ def start_ros(args, stage, depth_mapping, replay, app):
         cameras=args.ros_cameras,
         depth=args.ros_depth,
         cloud_hz=args.ros_cloud_hz,
+        ros_args=["--ros-args", *args.ros_args] if args.ros_args is not None else [],
     )
     try:
         scene = ViewerScene(stage)
@@ -368,25 +372,24 @@ def save_snapshot(app, viewport, path):
     logger.info("Saved viewport to %s", path)
 
 
-def create_motion(args, stage, command_source):
+def create_motion(args, stage, command_source, bridge):
     from hydraulic_motion import Gamepad, HydraulicMotion, MotionWorker, SceneJoints
 
     joints = SceneJoints(stage)
     motion = HydraulicMotion(joints.initial, joints.limits, dynamics=not args.nodynamics, repo=args.actuator_repo)
-    worker = MotionWorker(motion)
     joints.apply(motion.position)
+    valve_source = None
     if command_source is None:
-        if args.headless:
-
-            def command_source():
-                return [0.0] * 4, False
-        else:
+        if args.headless and bridge is not None:
+            valve_source = bridge.start_teleop()
+            logger.info("Headless teleop receiving ROS valve commands")
+        elif not args.headless:
             gamepad = Gamepad()
             command_source = gamepad.read
             logger.info("%s", gamepad.source.description)
-    logger.info("Gamepad: left X slew, left Y tilt, right Y lift, right X bucket; B/R resets.")
+            logger.info("Gamepad: left X slew, left Y tilt, right Y lift, right X bucket; B/R resets.")
     logger.info("Dynamics: %s; fixed 100 Hz CPU control", "direct speeds" if args.nodynamics else "arm + slew MLP")
-    return joints, worker, command_source
+    return joints, MotionWorker(motion, valve_source=valve_source), command_source
 
 
 def configure_display(args, stage, sensor_only):
@@ -481,12 +484,13 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
             cleanup.callback(depth_mapping.close)
             logger.info("D435i depth and terrain maps enabled; save directory: %s", args.depth_out.resolve())
 
-        if args.mode == "gamepad":
-            joints, worker, command_source = create_motion(args, stage, command_source)
-
         ros_frames = start_ros(args, stage, depth_mapping, replay, app)
         if ros_frames:
             cleanup.callback(ros_frames.close)
+        if args.mode == "gamepad":
+            joints, worker, command_source = create_motion(
+                args, stage, command_source, ros_frames.bridge if ros_frames else None
+            )
         live = LiveSensors.for_viewer(depth_mapping, ros_frames)
         if live:
             cleanup.callback(live.close)
@@ -507,12 +511,15 @@ def main(argv: list[str] | None = None, *, command_source=None) -> None:
             if timeline and timeline.is_playing():
                 raise RuntimeError("Keep physics paused while capturing kinematic USD poses for gamepad or ROS")
             if worker is not None:
-                command, reset = command_source()
+                command, reset = command_source() if command_source is not None else (None, False)
                 joints.apply(worker.sample(command, reset))
                 if reset:
                     depth_mapping.clear()
             if ros_frames is not None and not live:
                 ros_frames.bridge.spin()
+            if ros_frames is not None and ros_frames.bridge.map_reset_requested.is_set():
+                ros_frames.bridge.map_reset_requested.clear()
+                depth_mapping.clear()
             if replay:
                 if ros_frames is not None and ros_frames.clock.mode == "replay":
                     loop, index = divmod(ros_frames.count, len(replay))
